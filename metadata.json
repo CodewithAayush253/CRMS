@@ -1,0 +1,6 @@
+{
+  "name": "Car Rental Management System",
+  "description": "Comprehensive Car Rental Management System with customer booking, fleet management, pricing engine with late return calculation, maintenance tracking, and Java Spring Boot architecture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
