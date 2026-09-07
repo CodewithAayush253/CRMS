@@ -35,7 +35,29 @@ export const StorageService = {
   getCustomers(): Customer[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      return data ? JSON.parse(data) : INITIAL_CUSTOMERS;
+      const list: Customer[] = data ? JSON.parse(data) : INITIAL_CUSTOMERS;
+      // Guarantee primary admin is configured with requested credentials
+      const adminIdx = list.findIndex(c => c.email.toLowerCase() === 'av8279@admin.crms');
+      if (adminIdx === -1) {
+        list.push({
+          id: 'admin-1',
+          name: 'Aayush (Fleet Admin)',
+          email: 'av8279@admin.crms',
+          phone: '+91 98100 00001',
+          licenseNumber: 'DL-01-2015-1122334',
+          role: 'ROLE_ADMIN',
+          memberSince: '2022-01-10',
+          totalRentals: 0,
+          loyaltyPoints: 99999,
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          password: 'Aayush@2005',
+        });
+      } else {
+        list[adminIdx].password = 'Aayush@2005';
+        list[adminIdx].role = 'ROLE_ADMIN';
+        list[adminIdx].name = 'Aayush (Fleet Admin)';
+      }
+      return list;
     } catch {
       return INITIAL_CUSTOMERS;
     }

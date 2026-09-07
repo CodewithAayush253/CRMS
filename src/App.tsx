@@ -166,7 +166,7 @@ export default function App() {
     // Only verified Admin can view Admin tabs
     if (tab.toString().startsWith('admin-')) {
       if (currentUser?.role !== 'ROLE_ADMIN') {
-        handleOpenAuth('ADMIN_LOGIN', 'access the Administrator Fleet Operations Panel');
+        handleOpenAuth('CUSTOMER_LOGIN', 'access the Administrator Fleet Operations Panel');
         return;
       }
     }

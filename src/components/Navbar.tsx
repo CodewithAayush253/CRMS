@@ -46,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (isAdmin) {
       onSelectTab(tabName);
     } else {
-      onOpenAuthModal('ADMIN_LOGIN', 'access the Administrator Fleet Operations Panel');
+      onOpenAuthModal('CUSTOMER_LOGIN', 'access the Administrator Fleet Operations Panel');
     }
   };
 
@@ -234,21 +234,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   id="nav-customer-signup-btn"
-                  onClick={() => onOpenAuthModal('CUSTOMER_SIGNUP', 'create your verified customer account')}
+                  onClick={() => onOpenAuthModal('CUSTOMER_SIGNUP', 'create your verified account')}
                   className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>Create Account</span>
-                </button>
-
-                <button
-                  id="nav-admin-login-btn"
-                  onClick={() => onOpenAuthModal('ADMIN_LOGIN', 'access the Administrator Fleet Operations Panel')}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-red-950/60 hover:text-red-300 hover:border-red-500/50 text-slate-300 border border-slate-700 font-semibold rounded-xl text-xs transition-all flex items-center gap-1.5"
-                  title="Restricted Admin Panel - Authorized Personnel Only"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-red-400" />
-                  <span className="hidden md:inline">Admin Portal</span>
                 </button>
               </div>
             ) : isCustomer ? (
@@ -295,7 +285,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <ShieldCheck className="w-4 h-4 text-red-400" />
                   <div className="text-left hidden sm:block">
                     <p className="text-xs font-bold text-white leading-tight">Admin: {currentUser.name.split(' ')[0]}</p>
-                    <p className="text-[10px] text-red-300 font-mono">ROLE_ADMIN (PIN 9821)</p>
+                    <p className="text-[10px] text-red-300 font-mono">ROLE_ADMIN ({currentUser.email})</p>
                   </div>
                 </div>
 
@@ -392,12 +382,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className={`px-2.5 py-1 rounded whitespace-nowrap ${activeTab === 'customer-bookings' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300'}`}
               >
                 My Bookings {currentUser && `(${activeBookingsCount})`}
-              </button>
-              <button
-                onClick={() => onOpenAuthModal('ADMIN_LOGIN', 'access the Administrator Fleet Operations Panel')}
-                className="px-2.5 py-1 rounded whitespace-nowrap text-red-300 bg-red-950/40 border border-red-800/40"
-              >
-                Admin Login
               </button>
             </>
           )}

@@ -68,16 +68,16 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
   {
     id: 'admin-1',
-    name: 'Sarah Jenkins (Fleet Director)',
-    email: 'admin@crms-enterprise.com',
+    name: 'Aayush (Fleet Admin)',
+    email: 'av8279@admin.crms',
     phone: '+91 98100 00001',
     licenseNumber: 'DL-01-2015-1122334',
     role: 'ROLE_ADMIN',
     memberSince: '2022-01-10',
     totalRentals: 0,
     loyaltyPoints: 99999,
-    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
-    password: 'admin123',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    password: 'Aayush@2005',
   },
 ];
 
