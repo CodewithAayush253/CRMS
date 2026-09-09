@@ -1,12 +1,9 @@
-{
-  "projectId": "funky-lotus-qghtt",
-  "appId": "1:601810032768:web:a47af9a0ea4fe2470c2e65",
-  "apiKey": "AIzaSyCKRWLyqeQmYF2IIYQQHfoV-G2XYsLTDpU",
-  "authDomain": "funky-lotus-qghtt.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-carrentalmanagem-9af05469-1d41-4a83-9144-66ee996dd8b2",
-  "storageBucket": "funky-lotus-qghtt.firebasestorage.app",
-  "messagingSenderId": "601810032768",
-  "measurementId": "",
-  "oAuthClientId": "601810032768-aea2bmo572rv0b0ar9jgb4c6tjnevlvj.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
-}
+const firebaseConfig = {
+  apiKey: "AIzaSyAbY7cJY7wPurwQzvzKZCvFUHkSJM_cJxk",
+  authDomain: "crms-95421.firebaseapp.com",
+  projectId: "crms-95421",
+  storageBucket: "crms-95421.firebasestorage.app",
+  messagingSenderId: "165809570600",
+  appId: "1:165809570600:web:bc9ae733471a547860861d",
+  measurementId: "G-5Z7QCG7Q2X"
+};
