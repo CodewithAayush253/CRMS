@@ -4,7 +4,8 @@ import {
   getDocs, 
   setDoc, 
   doc, 
-  getDoc 
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { Vehicle, Customer, Booking, PaymentTransaction, MaintenanceRecord, VehicleReview } from '../types';
 import { 
@@ -92,6 +93,14 @@ export const StorageService = {
 
   async saveVehicles(vehicles: Vehicle[]) {
     await saveCollectionToFirestore(COLLECTIONS.VEHICLES, vehicles);
+  },
+
+  async deleteVehicle(vehicleId: string) {
+    try {
+      await deleteDoc(doc(db, COLLECTIONS.VEHICLES, String(vehicleId)));
+    } catch (err) {
+      console.warn('Firestore delete vehicle note:', err);
+    }
   },
 
   async getCustomers(): Promise<Customer[]> {

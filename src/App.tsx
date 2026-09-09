@@ -433,9 +433,10 @@ export default function App() {
     showToast(`Updated vehicle details for ${updatedVehicle.make} ${updatedVehicle.model}.`);
   };
 
-  const handleDeleteVehicle = (vehicleId: string) => {
+  const handleDeleteVehicle = async (vehicleId: string) => {
     setVehicles(prev => prev.filter(v => v.id !== vehicleId));
-    showToast('Vehicle removed from fleet inventory.');
+    await StorageService.deleteVehicle(vehicleId);
+    showToast('Vehicle removed from fleet inventory and Firestore database.');
   };
 
   // Maintenance Handlers
