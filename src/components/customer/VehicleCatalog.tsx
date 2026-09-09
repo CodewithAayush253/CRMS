@@ -77,7 +77,7 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory | 'All'>('All');
   const [selectedTransmission, setSelectedTransmission] = useState<'All' | 'Automatic' | 'Manual'>('All');
   const [selectedFuel, setSelectedFuel] = useState<'All' | 'Petrol' | 'Diesel' | 'Electric' | 'Hybrid'>('All');
-  const [maxPrice, setMaxPrice] = useState<number>(25000);
+  const [maxPrice, setMaxPrice] = useState<number>(100000);
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false);
 
   const rentalDays = calculateRentalDays(pickupDate, returnDate);
