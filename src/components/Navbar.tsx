@@ -5,7 +5,6 @@ import {
   Code2, 
   User, 
   CalendarCheck, 
-  RotateCcw,
   Sparkles,
   Lock,
   UserPlus,
@@ -23,7 +22,7 @@ interface NavbarProps {
   onOpenAuthModal: (mode: 'CUSTOMER_SIGNUP' | 'CUSTOMER_LOGIN' | 'ADMIN_LOGIN', task?: string) => void;
   onLogout: () => void;
   onOpenJavaModal: () => void;
-  onResetData: () => void;
+  onResetData?: () => void;
   activeBookingsCount: number;
   pendingReviewsCount?: number;
 }
@@ -308,16 +307,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
             )}
-
-            {/* Reset Demo Data */}
-            <button
-              id="reset-demo-data-btn"
-              onClick={onResetData}
-              title="Reset fleet, bookings and payments to initial demo state"
-              className="p-2 text-slate-400 hover:text-amber-400 hover:bg-slate-800/80 rounded-xl transition-colors border border-transparent hover:border-slate-700"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
           </div>
 
         </div>
