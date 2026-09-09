@@ -1,9 +1,10 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyAbY7cJY7wPurwQzvzKZCvFUHkSJM_cJxk",
-  authDomain: "crms-95421.firebaseapp.com",
-  projectId: "crms-95421",
-  storageBucket: "crms-95421.firebasestorage.app",
-  messagingSenderId: "165809570600",
-  appId: "1:165809570600:web:bc9ae733471a547860861d",
-  measurementId: "G-5Z7QCG7Q2X"
-};
+{
+  "apiKey": "AIzaSyAbY7cJY7wPurwQzvzKZCvFUHkSJM_cJxk",
+  "authDomain": "crms-95421.firebaseapp.com",
+  "projectId": "crms-95421",
+  "storageBucket": "crms-95421.firebasestorage.app",
+  "messagingSenderId": "165809570600",
+  "appId": "1:165809570600:web:bc9ae733471a547860861d",
+  "measurementId": "G-5Z7QCG7Q2X",
+  "firestoreDatabaseId": "(default)"
+}
