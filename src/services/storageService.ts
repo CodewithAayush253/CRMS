@@ -32,20 +32,9 @@ const STORAGE_KEYS = {
 
 // Helper to get collection items with instant local/initial fallback and background sync
 async function seedCollectionIfEmpty<T extends { id: string }>(collectionName: string, initialData: T[]): Promise<T[]> {
-  // Always ensure local storage has initialData merged first for instant response
   const localKey = `crms_${collectionName}_v2`;
-  const local = localStorage.getItem(localKey);
-  let items: T[] = local ? JSON.parse(local) : [...initialData];
 
-  // Merge any missing initialData items
-  for (const initItem of initialData) {
-    if (!items.some(i => i.id === initItem.id)) {
-      items.push(initItem);
-    }
-  }
-  localStorage.setItem(localKey, JSON.stringify(items));
-
-  // Try fetching/syncing from Firestore in background
+  // Try fetching from Firestore first
   try {
     const colRef = collection(db, collectionName);
     const snapshot = await getDocs(colRef);
@@ -54,25 +43,28 @@ async function seedCollectionIfEmpty<T extends { id: string }>(collectionName: s
       snapshot.forEach((docSnap) => {
         remoteItems.push(docSnap.data() as T);
       });
-      // Merge remote items with local items
-      for (const item of items) {
-        if (!remoteItems.some(r => r.id === item.id)) {
-          remoteItems.push(item);
-        }
-      }
-      items = remoteItems;
-      localStorage.setItem(localKey, JSON.stringify(items));
+      localStorage.setItem(localKey, JSON.stringify(remoteItems));
+      return remoteItems;
     } else {
-      // Seed Firestore if empty
+      // Seed Firestore if empty with initialData
+      const items = [...initialData];
       for (const item of items) {
         await setDoc(doc(db, collectionName, String(item.id)), item);
       }
+      localStorage.setItem(localKey, JSON.stringify(items));
+      return items;
     }
   } catch (err) {
     console.warn(`Firestore sync note for ${collectionName}:`, err);
+    // Fallback to local storage if offline/error
+    const local = localStorage.getItem(localKey);
+    if (local) {
+      return JSON.parse(local);
+    }
+    const items = [...initialData];
+    localStorage.setItem(localKey, JSON.stringify(items));
+    return items;
   }
-
-  return items;
 }
 
 async function saveCollectionToFirestore<T extends { id: string }>(collectionName: string, items: T[]) {
