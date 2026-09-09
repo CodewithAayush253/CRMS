@@ -41,14 +41,41 @@ import { formatINR } from './utils/currency';
 import { CheckCircle2, Zap } from 'lucide-react';
 
 export default function App() {
-  // Global Data States
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => StorageService.getVehicles());
-  const [customers, setCustomers] = useState<Customer[]>(() => StorageService.getCustomers());
-  const [bookings, setBookings] = useState<Booking[]>(() => StorageService.getBookings());
-  const [payments, setPayments] = useState<PaymentTransaction[]>(() => StorageService.getPayments());
-  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>(() => StorageService.getMaintenance());
-  const [reviews, setReviews] = useState<VehicleReview[]>(() => StorageService.getReviews());
+  // Global Data States (Loaded from Firestore)
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
+  const [reviews, setReviews] = useState<VehicleReview[]>([]);
   const [currentUser, setCurrentUser] = useState<Customer | null>(() => StorageService.getCurrentUser());
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
+
+  // Initial load from Firestore
+  useEffect(() => {
+    async function loadAllData() {
+      try {
+        const [vList, cList, bList, pList, mList, rList] = await Promise.all([
+          StorageService.getVehicles(),
+          StorageService.getCustomers(),
+          StorageService.getBookings(),
+          StorageService.getPayments(),
+          StorageService.getMaintenance(),
+          StorageService.getReviews(),
+        ]);
+        setVehicles(vList);
+        setCustomers(cList);
+        setBookings(bList);
+        setPayments(pList);
+        setMaintenance(mList);
+        setReviews(rList);
+        setIsDataLoaded(true);
+      } catch (err) {
+        console.error('Failed to load from Firestore:', err);
+      }
+    }
+    loadAllData();
+  }, []);
 
   // Active navigation tab
   const [activeTab, setActiveTab] = useState<
@@ -92,26 +119,42 @@ export default function App() {
     }, 4500);
   };
 
-  // Sync to storage on state changes
+  // Sync to Firestore on state changes once loaded
   useEffect(() => {
-    StorageService.saveVehicles(vehicles);
-  }, [vehicles]);
+    if (isDataLoaded && vehicles.length > 0) {
+      StorageService.saveVehicles(vehicles);
+    }
+  }, [vehicles, isDataLoaded]);
 
   useEffect(() => {
-    StorageService.saveBookings(bookings);
-  }, [bookings]);
+    if (isDataLoaded && bookings.length >= 0) {
+      StorageService.saveBookings(bookings);
+    }
+  }, [bookings, isDataLoaded]);
 
   useEffect(() => {
-    StorageService.savePayments(payments);
-  }, [payments]);
+    if (isDataLoaded && payments.length >= 0) {
+      StorageService.savePayments(payments);
+    }
+  }, [payments, isDataLoaded]);
 
   useEffect(() => {
-    StorageService.saveMaintenance(maintenance);
-  }, [maintenance]);
+    if (isDataLoaded && maintenance.length >= 0) {
+      StorageService.saveMaintenance(maintenance);
+    }
+  }, [maintenance, isDataLoaded]);
 
   useEffect(() => {
-    StorageService.saveReviews(reviews);
-  }, [reviews]);
+    if (isDataLoaded && reviews.length >= 0) {
+      StorageService.saveReviews(reviews);
+    }
+  }, [reviews, isDataLoaded]);
+
+  useEffect(() => {
+    if (isDataLoaded && customers.length > 0) {
+      StorageService.saveCustomers(customers);
+    }
+  }, [customers, isDataLoaded]);
 
   useEffect(() => {
     StorageService.setCurrentUser(currentUser);

@@ -1,3 +1,11 @@
+import { db } from '../lib/firebase';
+import { 
+  collection, 
+  getDocs, 
+  setDoc, 
+  doc, 
+  getDoc 
+} from 'firebase/firestore';
 import { Vehicle, Customer, Booking, PaymentTransaction, MaintenanceRecord, VehicleReview } from '../types';
 import { 
   INITIAL_VEHICLES, 
@@ -8,115 +16,148 @@ import {
   INITIAL_REVIEWS 
 } from '../data/initialData';
 
+const COLLECTIONS = {
+  VEHICLES: 'vehicles',
+  CUSTOMERS: 'customers',
+  BOOKINGS: 'bookings',
+  PAYMENTS: 'payments',
+  MAINTENANCE: 'maintenance',
+  REVIEWS: 'reviews',
+};
+
 const STORAGE_KEYS = {
-  VEHICLES: 'crms_vehicles_v2_inr',
-  CUSTOMERS: 'crms_customers_v2_inr',
-  BOOKINGS: 'crms_bookings_v2_inr',
-  PAYMENTS: 'crms_payments_v2_inr',
-  MAINTENANCE: 'crms_maintenance_v2_inr',
-  REVIEWS: 'crms_reviews_v2_inr',
   CURRENT_USER: 'crms_current_user_v2_inr',
 };
 
-export const StorageService = {
-  getVehicles(): Vehicle[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.VEHICLES);
-      return data ? JSON.parse(data) : INITIAL_VEHICLES;
-    } catch {
-      return INITIAL_VEHICLES;
+// Helper to get collection items with instant local/initial fallback and background sync
+async function seedCollectionIfEmpty<T extends { id: string }>(collectionName: string, initialData: T[]): Promise<T[]> {
+  // Always ensure local storage has initialData merged first for instant response
+  const localKey = `crms_${collectionName}_v2`;
+  const local = localStorage.getItem(localKey);
+  let items: T[] = local ? JSON.parse(local) : [...initialData];
+
+  // Merge any missing initialData items
+  for (const initItem of initialData) {
+    if (!items.some(i => i.id === initItem.id)) {
+      items.push(initItem);
     }
-  },
+  }
+  localStorage.setItem(localKey, JSON.stringify(items));
 
-  saveVehicles(vehicles: Vehicle[]) {
-    localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(vehicles));
-  },
-
-  getCustomers(): Customer[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      const list: Customer[] = data ? JSON.parse(data) : INITIAL_CUSTOMERS;
-      // Guarantee primary admin is configured with requested credentials
-      const adminIdx = list.findIndex(c => c.email.toLowerCase() === 'av8279@admin.crms');
-      if (adminIdx === -1) {
-        list.push({
-          id: 'admin-1',
-          name: 'Aayush (Fleet Admin)',
-          email: 'av8279@admin.crms',
-          phone: '+91 98100 00001',
-          licenseNumber: 'DL-01-2015-1122334',
-          role: 'ROLE_ADMIN',
-          memberSince: '2022-01-10',
-          totalRentals: 0,
-          loyaltyPoints: 99999,
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-          password: 'Aayush@2005',
-        });
-      } else {
-        list[adminIdx].password = 'Aayush@2005';
-        list[adminIdx].role = 'ROLE_ADMIN';
-        list[adminIdx].name = 'Aayush (Fleet Admin)';
+  // Try fetching/syncing from Firestore in background
+  try {
+    const colRef = collection(db, collectionName);
+    const snapshot = await getDocs(colRef);
+    if (!snapshot.empty) {
+      const remoteItems: T[] = [];
+      snapshot.forEach((docSnap) => {
+        remoteItems.push(docSnap.data() as T);
+      });
+      // Merge remote items with local items
+      for (const item of items) {
+        if (!remoteItems.some(r => r.id === item.id)) {
+          remoteItems.push(item);
+        }
       }
-      return list;
-    } catch {
-      return INITIAL_CUSTOMERS;
+      items = remoteItems;
+      localStorage.setItem(localKey, JSON.stringify(items));
+    } else {
+      // Seed Firestore if empty
+      for (const item of items) {
+        await setDoc(doc(db, collectionName, String(item.id)), item);
+      }
     }
-  },
+  } catch (err) {
+    console.warn(`Firestore sync note for ${collectionName}:`, err);
+  }
 
-  saveCustomers(customers: Customer[]) {
-    localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
-  },
+  return items;
+}
 
-  getBookings(): Booking[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.BOOKINGS);
-      return data ? JSON.parse(data) : INITIAL_BOOKINGS;
-    } catch {
-      return INITIAL_BOOKINGS;
+async function saveCollectionToFirestore<T extends { id: string }>(collectionName: string, items: T[]) {
+  try {
+    for (const item of items) {
+      await setDoc(doc(db, collectionName, String(item.id)), item);
     }
+  } catch (err) {
+    console.warn(`Firestore save fallback for ${collectionName}:`, err);
+    localStorage.setItem(`crms_${collectionName}_v2`, JSON.stringify(items));
+  }
+}
+
+export const StorageService = {
+  async getVehicles(): Promise<Vehicle[]> {
+    return await seedCollectionIfEmpty(COLLECTIONS.VEHICLES, INITIAL_VEHICLES);
   },
 
-  saveBookings(bookings: Booking[]) {
-    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
+  async saveVehicles(vehicles: Vehicle[]) {
+    await saveCollectionToFirestore(COLLECTIONS.VEHICLES, vehicles);
   },
 
-  getPayments(): PaymentTransaction[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.PAYMENTS);
-      return data ? JSON.parse(data) : INITIAL_PAYMENTS;
-    } catch {
-      return INITIAL_PAYMENTS;
+  async getCustomers(): Promise<Customer[]> {
+    const list = await seedCollectionIfEmpty(COLLECTIONS.CUSTOMERS, INITIAL_CUSTOMERS);
+    
+    // Guarantee admin
+    const adminIdx = list.findIndex(c => c.email.toLowerCase() === 'av8279@admin.crms');
+    const adminUser: Customer = {
+      id: 'admin-1',
+      name: 'Aayush (Fleet Admin)',
+      email: 'av8279@admin.crms',
+      phone: '+91 98100 00001',
+      licenseNumber: 'DL-01-2015-1122334',
+      role: 'ROLE_ADMIN',
+      memberSince: '2022-01-10',
+      totalRentals: 0,
+      loyaltyPoints: 99999,
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      password: 'Aayush@2005',
+    };
+
+    if (adminIdx === -1) {
+      list.push(adminUser);
+      await setDoc(doc(db, COLLECTIONS.CUSTOMERS, 'admin-1'), adminUser);
+    } else {
+      list[adminIdx].password = 'Aayush@2005';
+      list[adminIdx].role = 'ROLE_ADMIN';
+      list[adminIdx].name = 'Aayush (Fleet Admin)';
     }
+    return list;
   },
 
-  savePayments(payments: PaymentTransaction[]) {
-    localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(payments));
+  async saveCustomers(customers: Customer[]) {
+    await saveCollectionToFirestore(COLLECTIONS.CUSTOMERS, customers);
   },
 
-  getMaintenance(): MaintenanceRecord[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.MAINTENANCE);
-      return data ? JSON.parse(data) : INITIAL_MAINTENANCE;
-    } catch {
-      return INITIAL_MAINTENANCE;
-    }
+  async getBookings(): Promise<Booking[]> {
+    return await seedCollectionIfEmpty(COLLECTIONS.BOOKINGS, INITIAL_BOOKINGS);
   },
 
-  saveMaintenance(maintenance: MaintenanceRecord[]) {
-    localStorage.setItem(STORAGE_KEYS.MAINTENANCE, JSON.stringify(maintenance));
+  async saveBookings(bookings: Booking[]) {
+    await saveCollectionToFirestore(COLLECTIONS.BOOKINGS, bookings);
   },
 
-  getReviews(): VehicleReview[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.REVIEWS);
-      return data ? JSON.parse(data) : INITIAL_REVIEWS;
-    } catch {
-      return INITIAL_REVIEWS;
-    }
+  async getPayments(): Promise<PaymentTransaction[]> {
+    return await seedCollectionIfEmpty(COLLECTIONS.PAYMENTS, INITIAL_PAYMENTS);
   },
 
-  saveReviews(reviews: VehicleReview[]) {
-    localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(reviews));
+  async savePayments(payments: PaymentTransaction[]) {
+    await saveCollectionToFirestore(COLLECTIONS.PAYMENTS, payments);
+  },
+
+  async getMaintenance(): Promise<MaintenanceRecord[]> {
+    return await seedCollectionIfEmpty(COLLECTIONS.MAINTENANCE, INITIAL_MAINTENANCE);
+  },
+
+  async saveMaintenance(maintenance: MaintenanceRecord[]) {
+    await saveCollectionToFirestore(COLLECTIONS.MAINTENANCE, maintenance);
+  },
+
+  async getReviews(): Promise<VehicleReview[]> {
+    return await seedCollectionIfEmpty(COLLECTIONS.REVIEWS, INITIAL_REVIEWS);
+  },
+
+  async saveReviews(reviews: VehicleReview[]) {
+    await saveCollectionToFirestore(COLLECTIONS.REVIEWS, reviews);
   },
 
   getCurrentUser(): Customer | null {
@@ -129,21 +170,20 @@ export const StorageService = {
     return null;
   },
 
-  setCurrentUser(user: Customer | null) {
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+  saveCurrentUser(customer: Customer | null) {
+    if (customer) {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(customer));
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     }
   },
 
+  setCurrentUser(customer: Customer | null) {
+    this.saveCurrentUser(customer);
+  },
+
   resetAll() {
-    localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(INITIAL_VEHICLES));
-    localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(INITIAL_CUSTOMERS));
-    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(INITIAL_BOOKINGS));
-    localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(INITIAL_PAYMENTS));
-    localStorage.setItem(STORAGE_KEYS.MAINTENANCE, JSON.stringify(INITIAL_MAINTENANCE));
-    localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(INITIAL_REVIEWS));
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.clear();
+    window.location.reload();
   }
 };

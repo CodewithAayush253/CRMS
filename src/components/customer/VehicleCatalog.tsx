@@ -51,6 +51,9 @@ const CATEGORIES: (VehicleCategory | 'All')[] = [
   'Luxury',
   'Electric',
   'Sports',
+  'Van',
+  'Hatchback',
+  'Coupe',
 ];
 
 export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({

@@ -14,6 +14,8 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { Customer } from '../../types';
+import { auth, googleProvider } from '../../lib/firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 export type AuthMode = 'CUSTOMER_SIGNUP' | 'CUSTOMER_LOGIN' | 'ADMIN_LOGIN' | 'SIGNUP' | 'LOGIN';
 
@@ -170,6 +172,58 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onLoginSuccess(newCustomer);
       onClose();
     }, 600);
+  };
+
+  const handleGoogleSignUp = async () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const googleEmail = user.email;
+      const googleName = user.displayName || 'Google User';
+      const googlePhoto = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+
+      if (!googleEmail) {
+        setErrorMessage('Google account did not return a valid email address.');
+        return;
+      }
+
+      const existing = existingCustomers.find(c => c.email.toLowerCase() === googleEmail.toLowerCase());
+      if (existing) {
+        setSuccessMessage(`Authenticated successfully with Google as ${existing.name}!`);
+        setTimeout(() => {
+          onLoginSuccess(existing);
+          onClose();
+        }, 600);
+        return;
+      }
+
+      const newCustomer: Customer = {
+        id: `cust-google-${user.uid || Date.now()}`,
+        name: googleName,
+        email: googleEmail,
+        phone: user.phoneNumber || '+91 98111 22334',
+        licenseNumber: 'DL-01-GOOGLE-2026',
+        role: 'ROLE_CUSTOMER',
+        memberSince: new Date().toISOString().split('T')[0],
+        totalRentals: 0,
+        loyaltyPoints: 150,
+        avatarUrl: googlePhoto,
+        password: 'google-auth-secure',
+      };
+
+      onCustomerCreated(newCustomer);
+      setSuccessMessage(`Google account linked successfully! Welcome, ${newCustomer.name}.`);
+      setTimeout(() => {
+        onLoginSuccess(newCustomer);
+        onClose();
+      }, 600);
+    } catch (err: any) {
+      console.error('Google Auth Error:', err);
+      setErrorMessage(err?.message || 'Google sign-in failed. Please ensure Google Sign-In is enabled in your Firebase console authentication providers.');
+    }
   };
 
   // Handle Sign In (with merged Admin detection)
@@ -415,6 +469,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               >
                 <UserPlus className="w-4 h-4" />
                 Create Account & Continue
+              </button>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink mx-4 text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Or</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleSignUp}
+                className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-300 rounded-xl text-xs shadow-xs transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.2v3.15C3.21 21.32 7.27 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.39-1.49-.39-2.24s.14-1.52.39-2.24V6.61H1.2C.44 8.15 0 9.88 0 12s.44 3.85 1.2 5.39l4.07-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.27 0 3.21 2.68 1.2 6.61l4.07 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
+                </svg>
+                Sign up with Google
               </button>
 
               <div className="text-center pt-2">

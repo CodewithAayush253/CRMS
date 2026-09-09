@@ -1,4 +1,4 @@
-export type VehicleCategory = 'Sedan' | 'SUV' | 'Luxury' | 'Electric' | 'Sports' | 'Van';
+export type VehicleCategory = 'Sedan' | 'SUV' | 'Luxury' | 'Electric' | 'Sports' | 'Van' | 'Hatchback' | 'Coupe';
 export type TransmissionType = 'Automatic' | 'Manual';
 export type FuelType = 'Petrol' | 'Diesel' | 'Electric' | 'Hybrid';
 export type VehicleStatus = 'AVAILABLE' | 'RENTED' | 'MAINTENANCE' | 'RESERVED';
