@@ -227,6 +227,9 @@ export const FleetManagement: React.FC<FleetManagementProps> = ({
               <option value="Luxury">Luxury</option>
               <option value="Electric">Electric</option>
               <option value="Sports">Sports</option>
+              <option value="Hatchback">Hatchback</option>
+              <option value="Coupe">Coupe</option>
+              <option value="Van">Van</option>
             </select>
           </div>
 
@@ -415,6 +418,9 @@ export const FleetManagement: React.FC<FleetManagementProps> = ({
                     <option value="Luxury">Luxury</option>
                     <option value="Electric">Electric</option>
                     <option value="Sports">Sports</option>
+                    <option value="Hatchback">Hatchback</option>
+                    <option value="Coupe">Coupe</option>
+                    <option value="Van">Van</option>
                   </select>
                 </div>
                 <div>
