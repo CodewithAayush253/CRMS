@@ -93,6 +93,18 @@ export const StorageService = {
     } catch (err) {
       console.warn('Firestore delete vehicle note:', err);
     }
+    // Also update local storage cache
+    const localKey = `crms_${COLLECTIONS.VEHICLES}_v2`;
+    const local = localStorage.getItem(localKey);
+    if (local) {
+      try {
+        const vehicles: Vehicle[] = JSON.parse(local);
+        const updated = vehicles.filter(v => v.id !== vehicleId);
+        localStorage.setItem(localKey, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Error updating local cache on delete:', e);
+      }
+    }
   },
 
   async getCustomers(): Promise<Customer[]> {
