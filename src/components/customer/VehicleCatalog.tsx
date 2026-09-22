@@ -20,11 +20,13 @@ import {
   Navigation,
   UserPlus,
   LogIn,
-  AlertCircle
+  AlertCircle,
+  GitCompare
 } from 'lucide-react';
 import { Vehicle, VehicleCategory, Booking, VehicleReview, Customer } from '../../types';
 import { calculateRentalDays } from '../../services/pricingEngine';
 import { formatINR } from '../../utils/currency';
+import { VehicleCompareModal } from './VehicleCompareModal';
 
 interface VehicleCatalogProps {
   vehicles: Vehicle[];
@@ -81,6 +83,21 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false);
 
   const rentalDays = calculateRentalDays(pickupDate, returnDate);
+
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+
+  const toggleCompare = (vehicleId: string) => {
+    if (compareIds.includes(vehicleId)) {
+      setCompareIds(compareIds.filter(id => id !== vehicleId));
+    } else {
+      if (compareIds.length >= 2) {
+        setCompareIds([compareIds[1], vehicleId]);
+      } else {
+        setCompareIds([...compareIds, vehicleId]);
+      }
+    }
+  };
 
   // Check real-time date clash for bookings
   const isVehicleBookedForDates = (vehicleId: string): boolean => {
@@ -607,13 +624,27 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
                     </div>
 
                     {/* Actions */}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button
-                        onClick={() => onSelectVehicle(vehicle)}
-                        className="px-3 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-colors"
-                      >
-                        Specs & Reviews
-                      </button>
+                    <div className="space-y-2 pt-1">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => onSelectVehicle(vehicle)}
+                          className="px-3 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-colors"
+                        >
+                          Specs & Reviews
+                        </button>
+
+                        <button
+                          onClick={() => toggleCompare(vehicle.id)}
+                          className={`px-3 py-2 text-xs font-bold rounded-2xl transition-all border flex items-center justify-center gap-1.5 ${
+                            compareIds.includes(vehicle.id)
+                              ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <GitCompare className="w-3.5 h-3.5" />
+                          {compareIds.includes(vehicle.id) ? 'Comparing' : 'Compare'}
+                        </button>
+                      </div>
 
                       <button
                         id={`catalog-book-btn-${vehicle.id}`}
@@ -625,7 +656,7 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
                             onBookVehicle(vehicle);
                           }
                         }}
-                        className={`px-3 py-2.5 text-xs font-bold rounded-2xl transition-all shadow-xs ${
+                        className={`w-full py-2.5 text-xs font-bold rounded-2xl transition-all shadow-xs ${
                           isAvailable
                             ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 hover:shadow-sm'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
@@ -641,6 +672,58 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
           </div>
         )}
       </div>
+
+      {/* Floating Comparison Bar */}
+      {compareIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-950/95 text-white backdrop-blur-xl px-6 py-3.5 rounded-3xl shadow-2xl border border-slate-800 flex items-center gap-4 animate-bounce-short">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <GitCompare className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white">Comparing {compareIds.length} of 2 vehicles</p>
+              <p className="text-[10px] text-slate-400">Select two cars to compare specs side-by-side</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {compareIds.length === 2 ? (
+              <button
+                onClick={() => setIsCompareModalOpen(true)}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-extrabold transition-all shadow-md flex items-center gap-1.5"
+              >
+                Compare Side-by-Side →
+              </button>
+            ) : (
+              <span className="text-xs text-amber-300 italic px-2">Select 1 more</span>
+            )}
+            <button
+              onClick={() => setCompareIds([])}
+              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs transition-colors border border-slate-800"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Vehicle Comparison Modal */}
+      {isCompareModalOpen && compareIds.length === 2 && (
+        <VehicleCompareModal
+          vehicle1={vehicles.find(v => v.id === compareIds[0])!}
+          vehicle2={vehicles.find(v => v.id === compareIds[1])!}
+          isOpen={isCompareModalOpen}
+          onClose={() => setIsCompareModalOpen(false)}
+          onRemoveVehicle={(id) => {
+            const next = compareIds.filter(vId => vId !== id);
+            setCompareIds(next);
+            if (next.length < 2) setIsCompareModalOpen(false);
+          }}
+          onBook={(v) => onBookVehicle(v)}
+          currentUser={currentUser}
+          onRequestAuth={onRequestAuth}
+          rentalDays={rentalDays}
+        />
+      )}
     </div>
   );
 };

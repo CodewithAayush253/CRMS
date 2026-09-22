@@ -22,6 +22,7 @@ import { PaymentsLedger } from './components/admin/PaymentsLedger';
 import { ReviewModeration } from './components/admin/ReviewModeration';
 
 import { JavaArchitectureExplorer } from './components/java/JavaArchitectureExplorer';
+import { SkeletonLoader } from './components/SkeletonLoader';
 
 import { 
   Vehicle, 
@@ -600,6 +601,10 @@ export default function App() {
     : 0;
 
   const pendingReviewsCount = reviews.filter(r => r.status === 'PENDING').length;
+
+  if (!isDataLoaded) {
+    return <SkeletonLoader />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans selection:bg-amber-400 selection:text-slate-950">

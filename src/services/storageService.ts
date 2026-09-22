@@ -33,35 +33,44 @@ const STORAGE_KEYS = {
 // Helper to get collection items with instant local/initial fallback and background sync
 async function seedCollectionIfEmpty<T extends { id: string }>(collectionName: string, initialData: T[]): Promise<T[]> {
   const localKey = `crms_${collectionName}_v2`;
+  const deletedIds = collectionName === 'vehicles' ? JSON.parse(localStorage.getItem('crms_deleted_vehicle_ids') || '["veh-10"]') : [];
 
   // Try fetching from Firestore first
   try {
     const colRef = collection(db, collectionName);
     const snapshot = await getDocs(colRef);
+    let items: T[] = [];
     if (!snapshot.empty) {
-      const remoteItems: T[] = [];
       snapshot.forEach((docSnap) => {
-        remoteItems.push(docSnap.data() as T);
+        items.push(docSnap.data() as T);
       });
-      localStorage.setItem(localKey, JSON.stringify(remoteItems));
-      return remoteItems;
     } else {
       // Seed Firestore if empty with initialData
-      const items = [...initialData];
+      items = [...initialData];
       for (const item of items) {
         await setDoc(doc(db, collectionName, String(item.id)), item);
       }
-      localStorage.setItem(localKey, JSON.stringify(items));
-      return items;
     }
+
+    if (collectionName === 'vehicles') {
+      items = items.filter((v: any) => !deletedIds.includes(v.id) && v.id !== 'veh-10');
+    }
+
+    localStorage.setItem(localKey, JSON.stringify(items));
+    return items;
   } catch (err) {
     console.warn(`Firestore sync note for ${collectionName}:`, err);
     // Fallback to local storage if offline/error
+    let items: T[] = [];
     const local = localStorage.getItem(localKey);
     if (local) {
-      return JSON.parse(local);
+      items = JSON.parse(local);
+    } else {
+      items = [...initialData];
     }
-    const items = [...initialData];
+    if (collectionName === 'vehicles') {
+      items = items.filter((v: any) => !deletedIds.includes(v.id) && v.id !== 'veh-10');
+    }
     localStorage.setItem(localKey, JSON.stringify(items));
     return items;
   }
@@ -93,7 +102,11 @@ export const StorageService = {
     } catch (err) {
       console.warn('Firestore delete vehicle note:', err);
     }
-    // Also update local storage cache
+    const deletedIds = JSON.parse(localStorage.getItem('crms_deleted_vehicle_ids') || '[]');
+    if (!deletedIds.includes(vehicleId)) {
+      deletedIds.push(vehicleId);
+      localStorage.setItem('crms_deleted_vehicle_ids', JSON.stringify(deletedIds));
+    }
     const localKey = `crms_${COLLECTIONS.VEHICLES}_v2`;
     const local = localStorage.getItem(localKey);
     if (local) {
@@ -101,9 +114,7 @@ export const StorageService = {
         const vehicles: Vehicle[] = JSON.parse(local);
         const updated = vehicles.filter(v => v.id !== vehicleId);
         localStorage.setItem(localKey, JSON.stringify(updated));
-      } catch (e) {
-        console.error('Error updating local cache on delete:', e);
-      }
+      } catch (e) {}
     }
   },
 
