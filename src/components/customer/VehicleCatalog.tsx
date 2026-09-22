@@ -167,44 +167,6 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Account Required Notice (If not logged in) */}
-      {!currentUser && (
-        <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-500/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shrink-0 mt-0.5 shadow-xs">
-              <UserPlus className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm text-slate-900">Customer Account Required Before Performing Tasks</h3>
-                <span className="text-[10px] uppercase font-bold tracking-wider bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
-                  Step 1
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 mt-0.5 max-w-2xl">
-                As per rental policies, every customer must create an account in the customer panel first with a verified driving license before booking vehicles, submitting reviews, or processing returns.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-            <button
-              onClick={() => onRequestAuth('CUSTOMER_SIGNUP', 'book vehicles and manage rentals')}
-              className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              Create Customer Account
-            </button>
-            <button
-              onClick={() => onRequestAuth('CUSTOMER_LOGIN', 'access your customer portal')}
-              className="flex-1 sm:flex-none px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              Sign In
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Hero Banner with Booking Filter Bar & Manually Filled Locations */}
       <div className="relative bg-slate-900 rounded-3xl p-6 sm:p-8 text-white overflow-hidden shadow-sm border border-slate-800">
         <div className="absolute -right-16 -top-16 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -649,20 +611,14 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
                       <button
                         id={`catalog-book-btn-${vehicle.id}`}
                         disabled={!isAvailable}
-                        onClick={() => {
-                          if (!currentUser) {
-                            onRequestAuth('CUSTOMER_SIGNUP', `book the ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
-                          } else {
-                            onBookVehicle(vehicle);
-                          }
-                        }}
+                        onClick={() => onBookVehicle(vehicle)}
                         className={`w-full py-2.5 text-xs font-bold rounded-2xl transition-all shadow-xs ${
                           isAvailable
                             ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 hover:shadow-sm'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
                       >
-                        {isAvailable ? (currentUser ? 'Book Vehicle' : 'Create Account & Book') : 'Unavailable'}
+                        {isAvailable ? 'Book Vehicle' : 'Unavailable'}
                       </button>
                     </div>
                   </div>

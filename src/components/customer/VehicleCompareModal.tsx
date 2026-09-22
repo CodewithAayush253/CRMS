@@ -176,15 +176,11 @@ export const VehicleCompareModal: React.FC<VehicleCompareModalProps> = ({
                     <button
                       onClick={() => {
                         onClose();
-                        if (!currentUser) {
-                          onRequestAuth('CUSTOMER_SIGNUP', `book the ${vehicle.make} ${vehicle.model}`);
-                        } else {
-                          onBook(vehicle);
-                        }
+                        onBook(vehicle);
                       }}
                       className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
                     >
-                      <span>{currentUser ? 'Book This Vehicle' : 'Create Account & Book'}</span>
+                      <span>Book This Vehicle</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
