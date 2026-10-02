@@ -812,26 +812,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
-      {/* Spring Boot Java Architecture Banner */}
-      <div className="bg-slate-900 rounded-3xl p-6 sm:p-7 text-white border border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-        <div className="space-y-1.5 max-w-2xl">
-          <div className="inline-flex items-center gap-2 text-amber-400 font-bold text-xs bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
-            <ShieldCheck className="w-4 h-4" />
-            <span>Enterprise Java Architecture • Spring Boot 3</span>
-          </div>
-          <h4 className="text-lg font-bold text-white">Full Stack Architecture: REST Controllers, JPA/Hibernate & INR Pricing</h4>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            Explore the complete backend implementation with Java OOP Design Patterns (Strategy Pattern pricing with Indian GST & INR currency models, Factory Pattern vehicles, Singleton configurations), multithreading locks, and MySQL schemas.
-          </p>
-        </div>
-
-        <button
-          onClick={onOpenJavaModal}
-          className="px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl text-xs font-bold transition-all shadow-xs shrink-0"
-        >
-          Open Spring Boot Architecture Explorer
-        </button>
-      </div>
     </div>
   );
 };

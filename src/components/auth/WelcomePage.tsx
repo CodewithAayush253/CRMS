@@ -257,32 +257,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
         onLoginSuccess(newCustomer);
       }, 500);
     } catch (err: any) {
-      console.warn('Google Auth popup fallback:', err);
-      setSuccessMessage('Signing in via Google SSO...');
-      setIsLoading(true);
-      setTimeout(() => {
-        const fallbackEmail = 'google.user@example.com';
-        const existing = existingCustomers.find(c => c.email.toLowerCase() === fallbackEmail);
-        if (existing) {
-          onLoginSuccess(existing);
-          return;
-        }
-        const fallbackCust: Customer = {
-          id: `cust-google-${Date.now()}`,
-          name: 'Google Verified User',
-          email: fallbackEmail,
-          phone: '+91 98111 22334',
-          licenseNumber: 'DL-01-GOOGLE-2026',
-          role: 'ROLE_CUSTOMER',
-          memberSince: new Date().toISOString().split('T')[0],
-          totalRentals: 0,
-          loyaltyPoints: 150,
-          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          password: 'google-auth-secure',
-        };
-        onCustomerCreated(fallbackCust);
-        onLoginSuccess(fallbackCust);
-      }, 600);
+      console.error('Google Auth Error:', err);
+      setErrorMessage(`Google Login Failed: ${err?.message || 'Authentication popup was closed or failed.'}`);
+      setIsLoading(false);
     }
   };
 

@@ -235,6 +235,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         <MapPin className="w-3.5 h-3.5 text-amber-500" />
                         Custom Pickup Location (Manually Filled)
                       </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => setPickupLocation(`Current Location (GPS: ${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}) - New Delhi Hub`),
+                              () => setPickupLocation('Connaught Place Central Hub, New Delhi (GPS Detected)')
+                            );
+                          } else {
+                            setPickupLocation('Connaught Place Central Hub, New Delhi');
+                          }
+                        }}
+                        className="text-[10px] font-semibold text-amber-700 hover:underline bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1"
+                      >
+                        <Navigation className="w-2.5 h-2.5 animate-pulse text-amber-600" />
+                        Use Current GPS Location
+                      </button>
                     </div>
                     <div className="relative">
                       <input

@@ -232,7 +232,23 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
                   <MapPin className="w-3.5 h-3.5 text-amber-400" />
                   Pick-up Location
                 </label>
-                <span className="text-[10px] text-slate-400">Custom Address or Hub</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => onPickupLocationChange(`Current Location (GPS: ${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}) - New Delhi Hub`),
+                        () => onPickupLocationChange('Connaught Place Central Hub, New Delhi (GPS Detected)')
+                      );
+                    } else {
+                      onPickupLocationChange('Connaught Place Central Hub, New Delhi');
+                    }
+                  }}
+                  className="text-[10px] font-semibold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1"
+                >
+                  <Navigation className="w-3 h-3 animate-pulse text-amber-400" />
+                  Use Current Location
+                </button>
               </div>
               <div className="relative">
                 <input
