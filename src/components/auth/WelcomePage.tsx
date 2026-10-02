@@ -258,7 +258,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
       }, 500);
     } catch (err: any) {
       console.error('Google Auth Error:', err);
-      setErrorMessage(`Google Login Failed: ${err?.message || 'Authentication popup was closed or failed.'}`);
+      const errorMsg = err?.code === 'auth/unauthorized-domain' 
+        ? 'Google Login Failed: This domain is not authorized in Firebase Console (Authentication > Settings > Authorized domains).'
+        : `Google Login Failed: ${err?.message || 'Authentication popup was closed or failed.'}`;
+      setErrorMessage(errorMsg);
       setIsLoading(false);
     }
   };
