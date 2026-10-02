@@ -20,7 +20,8 @@ import {
   Sparkles,
   ArrowRight,
   PieChart as PieIcon,
-  BarChart3
+  BarChart3,
+  Navigation
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -279,130 +280,152 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Bento Header Box */}
-      <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-slate-800 shadow-sm relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="relative z-10">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500 text-slate-950 uppercase tracking-wider">
-              Fleet Operations & Executive HQ
-            </span>
-            <span className="text-xs text-slate-400 font-mono">Real-Time Telemetry • INR Currency Standard</span>
-          </div>
+      {/* Header Box */}
+      <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white border border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-            Administrative Operations & Analytics
+            Fleet Operations & Analytics
           </h1>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
-            Live KPI telemetry, revenue trend graphs, most frequently rented vehicles, upcoming maintenance queues, and customer demographic distributions.
+          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+            Monitor real-time vehicle allocation, revenue trends, active reservations, and fleet maintenance schedules.
           </p>
         </div>
 
         {/* Action Controls & Export Buttons */}
-        <div className="relative z-10 flex flex-wrap items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {onSimulateRealtimeEvent && (
             <button
               onClick={onSimulateRealtimeEvent}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-2xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors shadow-xs"
-              title="Simulate a real-time booking event across all sessions"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors"
+              title="Simulate a real-time booking event"
             >
               <Zap className="w-3.5 h-3.5 fill-amber-400" />
-              Simulate Live Event
+              Simulate Event
             </button>
           )}
 
           <button
+            onClick={() => onNavigateTab('admin-gps')}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors"
+          >
+            <Navigation className="w-3.5 h-3.5 text-indigo-400" />
+            GPS Radar
+          </button>
+
+          <button
+            onClick={() => onNavigateTab('admin-antitheft')}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            Security Shield
+          </button>
+
+          <button
             onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
+            className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
           </button>
-
-          <button
-            onClick={handleExportJSON}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" />
-            JSON Dump
-          </button>
         </div>
       </div>
 
-      {/* Primary KPI Bento Cards Grid */}
+      {/* Security Status Card */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-slate-900">Fleet Security & Telematics Status</span>
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-semibold">
+                Online
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Remote engine kill switch, PIN-to-Drive authorization, and geofence alerts are active across {totalFleet} fleet units.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigateTab('admin-antitheft')}
+          className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shrink-0"
+        >
+          <span>Security Controls</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Primary KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Bookings & Volume */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+        {/* Total Bookings */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-3">
             <span className="text-xs font-semibold text-slate-600">Total Bookings</span>
-            <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
               <CalendarCheck className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {bookings.length} <span className="text-sm font-semibold text-slate-500">Reservations</span>
+            <div className="text-2xl font-bold text-slate-900 tracking-tight font-mono tabular-nums">
+              {bookings.length} <span className="text-xs font-normal text-slate-500 font-sans">Reservations</span>
             </div>
-            <div className="flex items-center gap-2 text-xs mt-3 pt-3 border-t border-slate-100">
-              <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                {activeRentals} Active
-              </span>
-              <span className="inline-flex items-center gap-1 font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                {confirmedReservations} Confirmed
-              </span>
+            <div className="flex items-center gap-2 text-xs mt-3 pt-3 border-t border-slate-100 text-slate-600">
+              <span>{activeRentals} Active</span>
+              <span aria-hidden="true" className="text-slate-300">·</span>
+              <span>{confirmedReservations} Confirmed</span>
             </div>
           </div>
         </div>
 
         {/* Gross Revenue in INR */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-3">
-            <span className="text-xs font-semibold text-slate-600">Total Settled Revenue</span>
-            <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 font-extrabold text-xs">
-              ₹ INR
+            <span className="text-xs font-semibold text-slate-600">Settled Revenue</span>
+            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 font-bold text-xs">
+              ₹
             </div>
           </div>
           <div>
-            <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <div className="text-2xl font-bold text-slate-900 tracking-tight font-mono tabular-nums">
               {formatINR(totalRevenue)}
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-emerald-700 font-semibold">
-              <span className="flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>+18.4% MoM growth</span>
-              </span>
-              <span className="text-slate-400 font-normal text-[11px]">{payments.length} transactions</span>
+            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+              <span className="text-emerald-700 font-medium">+18.4% this month</span>
+              <span className="text-slate-400 text-[11px]">{payments.length} transactions</span>
             </div>
           </div>
         </div>
 
         {/* Fleet Utilization Rate */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-3">
             <span className="text-xs font-semibold text-slate-600">Fleet Utilization</span>
-            <div className="p-2.5 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
+            <div className="p-2 rounded-lg bg-amber-50 text-amber-600 border border-amber-100">
               <Activity className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <div className="text-2xl font-bold text-slate-900 tracking-tight font-mono tabular-nums">
               {utilizationRate}%
             </div>
-            <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
+            <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
               <div 
                 className="bg-amber-500 h-full rounded-full transition-all duration-500" 
                 style={{ width: `${utilizationRate}%` }} 
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2">
-              <span>{rentedVehicles} of {totalFleet} cars on road</span>
-              <span className="text-emerald-600 font-semibold">{availableVehicles} available</span>
+              <span>{rentedVehicles} of {totalFleet} on road</span>
+              <span className="text-emerald-700 font-medium">{availableVehicles} available</span>
             </div>
           </div>
         </div>
 
-        {/* Maintenance Queue & Cost */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+        {/* Maintenance Queue */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-3">
             <span className="text-xs font-semibold text-slate-600">Maintenance & Health</span>
             <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100">

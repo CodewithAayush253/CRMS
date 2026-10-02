@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { Vehicle, VehicleReview } from '../../types';
 import { formatINR } from '../../utils/currency';
+import { CustomerSecurityShieldModal } from './CustomerSecurityShieldModal';
+import { Lock, Radio, KeyRound } from 'lucide-react';
 
 interface CarDetailsModalProps {
   vehicle: Vehicle | null;
@@ -36,6 +38,7 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
   returnDate,
 }) => {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'REVIEWS'>('OVERVIEW');
+  const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
   if (!vehicle) return null;
 
   const isAvailable = vehicle.status === 'AVAILABLE';
@@ -52,10 +55,10 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
   const reviewCount = vehicleReviews.length > 0 ? vehicleReviews.length : vehicle.reviewCount;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
       <div 
         id={`car-details-modal-${vehicle.id}`}
-        className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200/90 animate-in fade-in zoom-in-95 duration-200 my-8"
+        className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200 my-8"
       >
         {/* Header Image & Close */}
         <div className="relative h-64 sm:h-72 w-full bg-slate-950 overflow-hidden">
@@ -68,17 +71,17 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-md transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Badges on Image */}
           <div className="absolute top-4 left-4 flex gap-2">
-            <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 shadow-xs">
+            <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-900/90 text-white border border-slate-700">
               {vehicle.category}
             </span>
-            <span className={`px-2.5 py-1 rounded-xl text-xs font-bold shadow-xs ${
+            <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
               isAvailable ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
             }`}>
               {vehicle.status}
@@ -87,14 +90,14 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
 
           <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between text-white">
             <div>
-              <p className="text-xs uppercase tracking-wider text-amber-400 font-bold">{vehicle.year} {vehicle.make}</p>
-              <h2 className="text-2xl font-extrabold leading-tight">{vehicle.model}</h2>
+              <p className="text-xs uppercase tracking-wider text-amber-400 font-semibold">{vehicle.year} {vehicle.make}</p>
+              <h2 className="text-2xl font-bold leading-tight">{vehicle.model}</h2>
               <div className="flex items-center gap-2 text-xs text-slate-300 mt-1">
-                <span className="flex items-center gap-1 text-amber-300 font-bold">
+                <span className="flex items-center gap-1 text-amber-300 font-semibold">
                   <Star className="w-3.5 h-3.5 fill-amber-300" />
                   {averageRating} ({reviewCount} reviews)
                 </span>
-                <span>•</span>
+                <span aria-hidden="true">·</span>
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-slate-400" />
                   {vehicle.location}
@@ -103,11 +106,11 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
             </div>
 
             <div className="text-right">
-              <div className="text-2xl font-black text-amber-400">
+              <div className="text-2xl font-bold text-amber-400 font-mono tabular-nums">
                 {formatINR(vehicle.dailyRate)}
                 <span className="text-xs font-normal text-slate-300">/day</span>
               </div>
-              <p className="text-[11px] text-slate-400">Deposit: {formatINR(vehicle.securityDeposit)}</p>
+              <p className="text-[11px] text-slate-400 font-mono tabular-nums">Deposit: {formatINR(vehicle.securityDeposit)}</p>
             </div>
           </div>
         </div>
@@ -222,6 +225,35 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
                 </div>
               </div>
 
+              {/* Software-Based Anti-Theft Protection Card */}
+              <div className="bg-gradient-to-r from-slate-900 to-indigo-950 p-4 rounded-2xl border border-slate-800 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-xs text-white">Velocity Cyber-Shield Anti-Theft</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Protected
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-0.5">
+                      Safe Remote Immobilizer, PIN-to-Drive MFA & GPS Geofence Tripwires enabled.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowSecurityModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all flex items-center gap-1.5 shrink-0 shadow-xs"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  Inspect Theft Shield
+                </button>
+              </div>
+
               {/* Policies & Assurance */}
               <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200/80 flex items-start gap-3 text-xs text-amber-900">
                 <Shield className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -332,6 +364,13 @@ export const CarDetailsModal: React.FC<CarDetailsModalProps> = ({
           </div>
         </div>
       </div>
+
+      {showSecurityModal && (
+        <CustomerSecurityShieldModal
+          vehicle={vehicle}
+          onClose={() => setShowSecurityModal(false)}
+        />
+      )}
     </div>
   );
 };

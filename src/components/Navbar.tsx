@@ -1,29 +1,27 @@
 import React, { useState } from 'react';
 import { 
   Car, 
-  ShieldCheck, 
-  Code2, 
-  User, 
   CalendarCheck, 
-  Sparkles,
-  Lock,
-  UserPlus,
+  LogOut, 
+  ShieldAlert, 
+  Award, 
+  Menu, 
+  X, 
+  Navigation,
+  ShieldCheck,
+  User,
   LogIn,
-  LogOut,
-  ShieldAlert,
-  Award,
-  Menu,
-  X
+  UserPlus
 } from 'lucide-react';
 import { Customer } from '../types';
 
 interface NavbarProps {
-  activeTab: 'customer-catalog' | 'customer-bookings' | 'admin-dashboard' | 'admin-fleet' | 'admin-bookings' | 'admin-maintenance' | 'admin-reports' | 'admin-payments' | 'admin-reviews';
+  activeTab: 'customer-catalog' | 'customer-bookings' | 'admin-dashboard' | 'admin-fleet' | 'admin-bookings' | 'admin-maintenance' | 'admin-reports' | 'admin-payments' | 'admin-reviews' | 'admin-antitheft' | 'admin-gps';
   onSelectTab: (tab: any) => void;
   currentUser: Customer | null;
   onOpenAuthModal: (mode: 'CUSTOMER_SIGNUP' | 'CUSTOMER_LOGIN' | 'ADMIN_LOGIN', task?: string) => void;
   onLogout: () => void;
-  onOpenJavaModal: () => void;
+  onOpenJavaModal?: () => void;
   onResetData?: () => void;
   activeBookingsCount: number;
   pendingReviewsCount?: number;
@@ -60,12 +58,24 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const adminNavItems = [
+    { id: 'admin-dashboard', label: 'Overview' },
+    { id: 'admin-fleet', label: 'Fleet' },
+    { id: 'admin-gps', label: 'GPS Radar' },
+    { id: 'admin-bookings', label: 'Bookings' },
+    { id: 'admin-antitheft', label: 'Security' },
+    { id: 'admin-maintenance', label: 'Maintenance' },
+    { id: 'admin-reports', label: 'Reports' },
+    { id: 'admin-payments', label: 'Payments' },
+    { id: 'admin-reviews', label: 'Reviews', count: pendingReviewsCount },
+  ];
+
   return (
-    <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 text-white shadow-md">
+    <header className="sticky top-0 z-50 bg-slate-900 border-b border-slate-800 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
+        <div className="flex items-center justify-between h-16 gap-4">
           
-          {/* Logo & Brand */}
+          {/* Brand Zone */}
           <div className="flex items-center gap-3 shrink-0">
             <button 
               id="crms-brand-btn"
@@ -73,176 +83,175 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onSelectTab(isAdmin ? 'admin-dashboard' : 'customer-catalog');
                 setMobileMenuOpen(false);
               }}
-              className="flex items-center gap-3.5 text-left group transition-transform active:scale-95"
+              className="flex items-center gap-2.5 text-left group transition-opacity hover:opacity-90"
             >
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-400 flex items-center justify-center shadow-lg shadow-amber-500/25 text-slate-950 font-black group-hover:scale-105 transition-all border border-amber-300/50">
-                <Car className="w-6 h-6" />
+              <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 font-black shadow-xs">
+                <Car className="w-5 h-5 text-slate-950" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white">Velocity<span className="text-amber-400">CRMS</span></span>
-                  <span className="hidden sm:inline-block text-[10px] uppercase font-extrabold tracking-wider bg-amber-500/10 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/20">Enterprise</span>
-                </div>
-                <p className="text-xs text-slate-400 font-medium hidden md:block">Car Rental Management & Fleet Control System</p>
-              </div>
+              <span className="font-extrabold text-lg tracking-tight text-white">
+                Velocity<span className="text-amber-400">CRMS</span>
+              </span>
             </button>
           </div>
 
-          {/* Desktop Navigation Mode Tabs */}
-          <nav className="hidden xl:flex items-center gap-1.5 bg-slate-950/80 p-2 rounded-2xl border border-slate-800/80 shadow-inner">
+          {/* Desktop Navigation Links */}
+          <nav className="hidden xl:flex items-center gap-1">
             {isAdmin ? (
-              <>
-                {[
-                  { id: 'admin-dashboard', label: 'Overview' },
-                  { id: 'admin-fleet', label: 'Fleet Manager' },
-                  { id: 'admin-bookings', label: 'All Bookings' },
-                  { id: 'admin-maintenance', label: 'Maintenance' },
-                  { id: 'admin-reports', label: 'Reports' },
-                  { id: 'admin-payments', label: 'Payments' },
-                  { id: 'admin-reviews', label: 'Reviews', count: pendingReviewsCount },
-                ].map((tab) => (
+              adminNavItems.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
                   <button
                     key={tab.id}
                     id={`nav-${tab.id}`}
                     onClick={() => onSelectTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                      activeTab === tab.id
-                        ? 'bg-amber-500 text-slate-950 shadow-md scale-[1.02]'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-slate-800 text-white'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                     }`}
                   >
                     <span>{tab.label}</span>
                     {!!tab.count && tab.count > 0 && (
-                      <span className="px-1.5 py-0.5 bg-slate-950 text-amber-400 text-[10px] font-black rounded-full">
+                      <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 text-[10px] font-bold rounded-full">
                         {tab.count}
                       </span>
                     )}
                   </button>
-                ))}
-              </>
+                );
+              })
             ) : (
               <>
                 <button
                   id="nav-customer-catalog"
                   onClick={() => onSelectTab('customer-catalog')}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                     activeTab === 'customer-catalog'
-                      ? 'bg-amber-500 text-slate-950 shadow-md scale-[1.02]'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
+                      ? 'bg-slate-800 text-white font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                   }`}
                 >
-                  <Car className="w-4 h-4" />
-                  Explore Fleet
+                  <Car className="w-3.5 h-3.5" />
+                  <span>Fleet Catalog</span>
                 </button>
+
                 <button
                   id="nav-customer-bookings"
                   onClick={handleCustomerBookingsClick}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all relative ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                     activeTab === 'customer-bookings'
-                      ? 'bg-amber-500 text-slate-950 shadow-md scale-[1.02]'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
+                      ? 'bg-slate-800 text-white font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                   }`}
                 >
-                  <CalendarCheck className="w-4 h-4" />
-                  My Bookings
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  <span>My Reservations</span>
                   {currentUser && activeBookingsCount > 0 && (
-                    <span className="ml-1 px-2 py-0.5 bg-amber-400 text-slate-950 text-[10px] font-black rounded-full shadow-xs animate-pulse">
+                    <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 text-[10px] font-bold rounded-full">
                       {activeBookingsCount}
                     </span>
                   )}
+                </button>
+
+                <button
+                  id="nav-customer-gps"
+                  onClick={() => onSelectTab('admin-gps')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    activeTab === 'admin-gps'
+                      ? 'bg-slate-800 text-white font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>GPS Map</span>
+                </button>
+
+                <button
+                  id="nav-customer-antitheft"
+                  onClick={() => onSelectTab('admin-antitheft')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    activeTab === 'admin-antitheft'
+                      ? 'bg-slate-800 text-white font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Security Shield</span>
                 </button>
               </>
             )}
           </nav>
 
-          {/* Right Action Bar */}
+          {/* Right Action & User Profile Zone */}
           <div className="flex items-center gap-3 shrink-0">
             
-            {/* Java Spring Boot Explorer Trigger */}
-            <button
-              id="open-java-architecture-btn"
-              onClick={onOpenJavaModal}
-              className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-all hover:scale-105 shadow-xs"
-              title="Inspect Java Spring Boot architecture & JPA specifications"
-            >
-              <Code2 className="w-4 h-4 text-emerald-400" />
-              <span>Spring Boot Spec</span>
-            </button>
-
-            {/* Authentication States */}
             {!currentUser ? (
-              /* Case 1: Unauthenticated Visitor */
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <button
                   id="nav-customer-login-btn"
                   onClick={() => onOpenAuthModal('CUSTOMER_LOGIN')}
-                  className="px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition-all flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white rounded-lg transition-colors"
                 >
-                  <LogIn className="w-4 h-4 text-slate-400" />
-                  <span className="hidden sm:inline">Sign In</span>
+                  Sign In
                 </button>
-
                 <button
                   id="nav-customer-signup-btn"
                   onClick={() => onOpenAuthModal('CUSTOMER_SIGNUP', 'create your verified account')}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition-all hover:scale-105 flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition-colors"
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Create Account</span>
+                  Create Account
                 </button>
               </div>
             ) : isCustomer ? (
-              /* Case 2: Authenticated Customer */
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-2.5 bg-slate-950/90 px-3.5 py-1.5 rounded-2xl border border-slate-800 shadow-inner">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-xs">
                   <img
                     src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
                     alt={currentUser.name}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-amber-400/60 shadow-xs"
+                    className="w-7 h-7 rounded-full object-cover border border-slate-700"
                   />
-                  <div className="text-left hidden sm:block">
-                    <p className="text-xs font-bold text-white leading-tight">{currentUser.name}</p>
-                    <p className="text-[10px] text-amber-400 font-semibold flex items-center gap-1 mt-0.5">
-                      <Award className="w-3 h-3 text-amber-400" />
-                      {currentUser.loyaltyPoints || 100} loyalty pts
+                  <div className="text-left hidden md:block">
+                    <p className="font-semibold text-white leading-tight">{currentUser.name}</p>
+                    <p className="text-[11px] text-slate-400">
+                      {currentUser.loyaltyPoints || 100} pts
                     </p>
                   </div>
                 </div>
 
-                {/* Admin Switch */}
                 <button
                   id="nav-switch-to-admin-btn"
                   onClick={() => handleAdminTabClick('admin-dashboard')}
-                  className="p-2.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-xl transition-all border border-slate-800 hover:border-slate-700 shadow-xs"
-                  title="Open Admin Portal"
+                  className="text-xs px-2.5 py-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition-colors"
+                  title="Switch to Administrator Dashboard"
                 >
-                  <ShieldCheck className="w-4 h-4" />
+                  Admin
                 </button>
 
                 <button
                   id="nav-logout-btn"
                   onClick={onLogout}
                   title="Sign out"
-                  className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all border border-slate-800 hover:border-slate-700 shadow-xs"
+                  className="text-xs px-2.5 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors flex items-center gap-1"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign Out</span>
                 </button>
               </div>
             ) : (
-              /* Case 3: Authenticated Admin */
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-2.5 bg-red-950/60 px-3.5 py-1.5 rounded-2xl border border-red-500/40 shadow-inner">
-                  <ShieldCheck className="w-4 h-4 text-red-400" />
-                  <div className="text-left hidden sm:block">
-                    <p className="text-xs font-extrabold text-white leading-tight">Admin: {currentUser.name}</p>
-                    <p className="text-[10px] text-red-300 font-mono">ROLE_ADMIN</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold text-xs">
+                    AD
+                  </div>
+                  <div className="text-left hidden md:block">
+                    <p className="font-semibold text-white leading-tight">{currentUser.name}</p>
+                    <p className="text-[11px] text-amber-400">Administrator</p>
                   </div>
                 </div>
 
                 <button
                   id="nav-customer-view-btn"
                   onClick={() => onSelectTab('customer-catalog')}
-                  className="px-3 py-2 text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all border border-slate-700 shadow-xs hidden sm:block"
+                  className="text-xs px-2.5 py-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-md transition-colors hidden sm:block font-medium"
                 >
                   Customer View
                 </button>
@@ -251,10 +260,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   id="nav-admin-logout-btn"
                   onClick={onLogout}
                   title="Log out of Admin Session"
-                  className="px-3 py-2 text-xs font-bold text-red-200 hover:text-white bg-red-950 hover:bg-red-900 border border-red-700/60 rounded-xl transition-all flex items-center gap-1.5 shadow-xs"
+                  className="text-xs px-2.5 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors flex items-center gap-1"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Exit Admin</span>
+                  <span className="hidden sm:inline">Sign Out</span>
                 </button>
               </div>
             )}
@@ -262,7 +271,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile Menu Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors border border-slate-700"
+              className="xl:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -271,37 +280,27 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         </div>
 
-        {/* Expandable Mobile & Tablet Interactive Navigation Drawer */}
+        {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="xl:hidden py-4 border-t border-slate-800 space-y-3 animate-fadeIn">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="xl:hidden py-3 border-t border-slate-800 space-y-2">
+            <div className="grid grid-cols-2 gap-1.5">
               {isAdmin ? (
-                <>
-                  {[
-                    { id: 'admin-dashboard', label: 'Overview' },
-                    { id: 'admin-fleet', label: 'Fleet Manager' },
-                    { id: 'admin-bookings', label: 'All Bookings' },
-                    { id: 'admin-maintenance', label: 'Maintenance' },
-                    { id: 'admin-reports', label: 'Reports' },
-                    { id: 'admin-payments', label: 'Payments' },
-                    { id: 'admin-reviews', label: 'Reviews', count: pendingReviewsCount },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        onSelectTab(tab.id);
-                        setMobileMenuOpen(false);
-                      }}
-                      className={`px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all ${
-                        activeTab === tab.id
-                          ? 'bg-amber-500 text-slate-950 shadow-md'
-                          : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200'
-                      }`}
-                    >
-                      {tab.label} {!!tab.count && tab.count > 0 && `(${tab.count})`}
-                    </button>
-                  ))}
-                </>
+                adminNavItems.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      onSelectTab(tab.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold text-left transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-slate-800 text-white font-bold'
+                        : 'text-slate-300 hover:bg-slate-800/60'
+                    }`}
+                  >
+                    {tab.label} {!!tab.count && tab.count > 0 && `(${tab.count})`}
+                  </button>
+                ))
               ) : (
                 <>
                   <button
@@ -309,45 +308,76 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onSelectTab('customer-catalog');
                       setMobileMenuOpen(false);
                     }}
-                    className={`px-3.5 py-3 rounded-xl text-xs font-bold text-left flex items-center gap-2 transition-all ${
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold text-left flex items-center gap-2 ${
                       activeTab === 'customer-catalog'
-                        ? 'bg-amber-500 text-slate-950 shadow-md'
-                        : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200'
+                        ? 'bg-slate-800 text-white font-bold'
+                        : 'text-slate-300 hover:bg-slate-800/60'
                     }`}
                   >
                     <Car className="w-4 h-4" />
-                    Explore Fleet
+                    Fleet Catalog
                   </button>
                   <button
                     onClick={() => {
                       handleCustomerBookingsClick();
                       setMobileMenuOpen(false);
                     }}
-                    className={`px-3.5 py-3 rounded-xl text-xs font-bold text-left flex items-center gap-2 transition-all ${
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold text-left flex items-center gap-2 ${
                       activeTab === 'customer-bookings'
-                        ? 'bg-amber-500 text-slate-950 shadow-md'
-                        : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200'
+                        ? 'bg-slate-800 text-white font-bold'
+                        : 'text-slate-300 hover:bg-slate-800/60'
                     }`}
                   >
                     <CalendarCheck className="w-4 h-4" />
-                    My Bookings {activeBookingsCount > 0 && `(${activeBookingsCount})`}
+                    My Reservations {activeBookingsCount > 0 && `(${activeBookingsCount})`}
+                  </button>
+                  <button
+                    onClick={() => {
+                      onSelectTab('admin-gps');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold text-left flex items-center gap-2 ${
+                      activeTab === 'admin-gps'
+                        ? 'bg-slate-800 text-white font-bold'
+                        : 'text-slate-300 hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <Navigation className="w-4 h-4" />
+                    GPS Map
+                  </button>
+                  <button
+                    onClick={() => {
+                      onSelectTab('admin-antitheft');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold text-left flex items-center gap-2 ${
+                      activeTab === 'admin-antitheft'
+                        ? 'bg-slate-800 text-white font-bold'
+                        : 'text-slate-300 hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Security Shield
                   </button>
                 </>
               )}
             </div>
 
-            <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  onOpenJavaModal();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-slate-700 transition-colors"
-              >
-                <Code2 className="w-4 h-4 text-emerald-400" />
-                <span>Spring Boot Architecture Spec</span>
-              </button>
-            </div>
+            {currentUser && (
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                <span className="text-xs text-slate-400">Signed in as {currentUser.name}</span>
+                <button
+                  onClick={() => {
+                    onLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         )}
 

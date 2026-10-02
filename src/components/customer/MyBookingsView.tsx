@@ -17,13 +17,16 @@ import {
   UserPlus,
   LogIn
 } from 'lucide-react';
-import { Booking, Customer, VehicleReview } from '../../types';
+import { Booking, Customer, VehicleReview, Vehicle } from '../../types';
 import { calculateLateReturnCharges, calculateCancellationRefund } from '../../services/pricingEngine';
 import { formatINR } from '../../utils/currency';
+import { CustomerVehicleGpsModal } from '../gps/CustomerVehicleGpsModal';
+import { Navigation } from 'lucide-react';
 
 interface MyBookingsViewProps {
   bookings: Booking[];
   currentUser: Customer | null;
+  vehicles?: Vehicle[];
   reviews?: VehicleReview[];
   onOpenInvoice: (booking: Booking) => void;
   onOpenReviewModal?: (booking: Booking, existingReview?: VehicleReview) => void;
@@ -41,6 +44,7 @@ interface MyBookingsViewProps {
 export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
   bookings,
   currentUser,
+  vehicles = [],
   reviews = [],
   onOpenInvoice,
   onOpenReviewModal,
@@ -58,6 +62,9 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
   // Cancel Modal state
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState('Change of travel plans');
+
+  // Live GPS tracking modal state
+  const [gpsTrackingBooking, setGpsTrackingBooking] = useState<Booking | null>(null);
 
   if (!currentUser) {
     return (
@@ -112,25 +119,25 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header & Tabs Bento Container */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs">
+      {/* Header & Status Filter Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Rental History & Active Reservations</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Reservations & Rental History</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Track reservations, submit vehicle reviews, simulate returns with Indian GST and late fees, and view tax invoices.
+            Track active rentals, access tax invoices, and complete vehicle returns.
           </p>
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex flex-wrap gap-1 bg-slate-100/90 p-1.5 rounded-2xl text-xs border border-slate-200/60">
+        <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl text-xs border border-slate-200/80">
           {(['ALL', 'ACTIVE', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-3.5 py-1.5 rounded-xl font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
                 filterStatus === status
-                  ? 'bg-amber-500 text-slate-950 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               {status}
@@ -141,13 +148,13 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
 
       {/* Bookings List */}
       {displayedBookings.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/90 shadow-xs space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+        <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-xs space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
             <Calendar className="w-6 h-6" />
           </div>
           <h3 className="text-sm font-bold text-slate-800">No Reservations in this Category</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            You currently have no bookings matching the selected status filter.
+            You currently have no reservations matching the selected filter.
           </p>
         </div>
       ) : (
@@ -166,60 +173,60 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
             return (
               <div
                 key={booking.id}
-                className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-md hover:border-slate-300 transition-all"
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:border-slate-300 transition-all"
               >
-                <div className="p-5 sm:p-6 flex flex-col md:flex-row gap-5">
+                <div className="p-5 flex flex-col md:flex-row gap-5">
                   {/* Vehicle Thumbnail */}
-                  <div className="relative w-full md:w-56 h-38 bg-slate-950 rounded-2xl overflow-hidden shrink-0 border border-slate-100">
+                  <div className="relative w-full md:w-52 h-36 bg-slate-900 rounded-xl overflow-hidden shrink-0 border border-slate-100">
                     <img
                       src={booking.vehicleImage}
                       alt={booking.vehicleName}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-2.5 left-2.5">
-                      <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-amber-500 text-slate-950 shadow-xs">
+                    <div className="absolute top-2 left-2">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900/90 text-white border border-slate-700">
                         {booking.vehicleCategory}
                       </span>
                     </div>
                   </div>
 
                   {/* Booking Details */}
-                  <div className="flex-1 flex flex-col justify-between space-y-3.5">
+                  <div className="flex-1 flex flex-col justify-between space-y-3">
                     <div>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-base sm:text-lg font-extrabold text-slate-900">{booking.vehicleName}</h3>
-                          <span className="text-xs font-mono font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-xl border border-slate-200">
+                          <h3 className="text-base font-bold text-slate-900">{booking.vehicleName}</h3>
+                          <span className="text-xs font-mono font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                             {booking.licensePlate}
                           </span>
                         </div>
 
                         {/* Status Badge */}
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          className={`px-2.5 py-0.5 rounded-md text-xs font-semibold ${
                             isActive
-                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
                               : isConfirmed
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : isCompleted
                               ? 'bg-slate-100 text-slate-700 border border-slate-200'
-                              : 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
                           }`}
                         >
                           {booking.status}
                         </span>
                       </div>
 
-                      <p className="text-xs font-mono text-slate-500 mt-1">
-                        Reservation #{booking.bookingNumber} • Booked on {new Date(booking.createdAt).toLocaleDateString()}
+                      <p className="text-xs text-slate-500 mt-1">
+                        Reservation #{booking.bookingNumber} · Booked on {new Date(booking.createdAt).toLocaleDateString()}
                       </p>
                     </div>
 
-                    {/* Dates & Location Bento Compartment */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100">
+                    {/* Dates & Location */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
                       <div>
-                        <span className="text-slate-400 text-[11px] block">Pickup Schedule:</span>
-                        <div className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                        <span className="text-slate-500 text-[11px] block">Pick-up:</span>
+                        <div className="font-medium text-slate-800 flex items-center gap-1.5 mt-0.5">
                           <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                           <span>{booking.pickupDate}</span>
                           <span className="text-slate-400">({booking.pickupLocation})</span>
@@ -227,8 +234,8 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
                       </div>
 
                       <div>
-                        <span className="text-slate-400 text-[11px] block">Scheduled Return:</span>
-                        <div className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                        <span className="text-slate-500 text-[11px] block">Scheduled Return:</span>
+                        <div className="font-medium text-slate-800 flex items-center gap-1.5 mt-0.5">
                           <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                           <span>{booking.returnDate}</span>
                           <span className="text-slate-400">({booking.returnLocation})</span>
@@ -238,7 +245,7 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
 
                     {/* Late fee adjustments if completed */}
                     {booking.lateFee !== undefined && booking.lateFee > 0 && (
-                      <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-2xl text-xs flex items-center justify-between text-amber-900">
+                      <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs flex items-center justify-between text-amber-900">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                           <span>Late Return Adjustment ({booking.hoursLate} hrs): <strong>+{formatINR(booking.lateFee)}</strong></span>
@@ -253,21 +260,33 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
                       <div>
                         <span className="text-[11px] text-slate-500">Total Settled (incl. deposit):</span>
-                        <span className="text-base font-extrabold text-slate-900 ml-1.5">
+                        <span className="text-sm font-bold text-slate-900 ml-1.5 font-mono tabular-nums">
                           {formatINR(booking.finalPaidAmount || booking.totalAmount)}
                         </span>
-                        <span className="text-[11px] text-emerald-600 font-semibold ml-2">
+                        <span className="text-[11px] text-emerald-700 font-medium ml-2">
                           ({booking.paymentStatus})
                         </span>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
+                        {/* Live GPS Tracking Button for Active/Confirmed rentals */}
+                        {(isActive || isConfirmed) && (
+                          <button
+                            id={`gps-track-btn-${booking.id}`}
+                            onClick={() => setGpsTrackingBooking(booking)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200"
+                          >
+                            <Navigation className="w-3.5 h-3.5 text-indigo-600" />
+                            GPS Tracking
+                          </button>
+                        )}
+
                         {/* Rating & Review Button for Completed Bookings */}
                         {isCompleted && onOpenReviewModal && (
                           <button
                             id={`review-booking-btn-${booking.id}`}
                             onClick={() => onOpenReviewModal(booking, existingReview)}
-                            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors border border-amber-200 shadow-xs"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200"
                           >
                             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
                             {existingReview ? `Your Review (${existingReview.rating}★)` : 'Rate & Review'}
@@ -277,9 +296,9 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
                         {/* Invoice Button */}
                         <button
                           onClick={() => onOpenInvoice(booking)}
-                          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                         >
-                          <Receipt className="w-3.5 h-3.5 text-amber-600" />
+                          <Receipt className="w-3.5 h-3.5 text-slate-500" />
                           Invoice
                         </button>
 
@@ -287,7 +306,7 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
                         {isConfirmed && (
                           <button
                             onClick={() => setCancellingBooking(booking)}
-                            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors border border-rose-200"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border border-rose-200"
                           >
                             <XCircle className="w-3.5 h-3.5" />
                             Cancel
@@ -530,6 +549,40 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* CUSTOMER LIVE GPS MODAL */}
+      {gpsTrackingBooking && (
+        <CustomerVehicleGpsModal
+          vehicle={
+            (vehicles && vehicles.find(v => v.id === gpsTrackingBooking.vehicleId)) || {
+              id: gpsTrackingBooking.vehicleId,
+              vin: '1HGCR2F83HA108291',
+              make: gpsTrackingBooking.vehicleName.split(' ')[0],
+              model: gpsTrackingBooking.vehicleName.split(' ').slice(1).join(' '),
+              year: 2024,
+              category: gpsTrackingBooking.vehicleCategory,
+              transmission: 'Automatic',
+              fuelType: 'Petrol',
+              seats: 5,
+              luggageCapacity: 3,
+              dailyRate: gpsTrackingBooking.dailyRate,
+              securityDeposit: gpsTrackingBooking.securityDeposit,
+              status: gpsTrackingBooking.status === 'ACTIVE' ? 'RENTED' : 'AVAILABLE',
+              mileage: 14200,
+              licensePlate: gpsTrackingBooking.licensePlate,
+              features: ['Live GPS Tracking', 'Anti-Theft Shield', 'PIN-to-Drive'],
+              imageUrl: gpsTrackingBooking.vehicleImage,
+              rating: 4.9,
+              reviewCount: 24,
+              location: gpsTrackingBooking.pickupLocation,
+              horsepower: 240,
+              fuelEfficiency: '16 km/l',
+            }
+          }
+          booking={gpsTrackingBooking}
+          onClose={() => setGpsTrackingBooking(null)}
+        />
       )}
     </div>
   );

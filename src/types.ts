@@ -182,3 +182,139 @@ export interface VehicleReview {
   verifiedRental?: boolean;
 }
 
+// Software-Based Theft Prevention & Vehicle Telematics Security Types
+export type ImmobilizerState = 'DISARMED' | 'ARMED' | 'EMERGENCY_LOCKOUT' | 'PENDING_SAFE_SHUTDOWN';
+
+export type TheftThreatSeverity = 'CRITICAL' | 'WARNING' | 'RESOLVED' | 'INFO';
+
+export type TheftThreatType = 
+  | 'RELAY_ATTACK_DETECTED' 
+  | 'GEOFENCE_BREACH' 
+  | 'UNSCHEDULED_TOW_MOTION' 
+  | 'UNAUTHORIZED_OBD_ACCESS' 
+  | 'RF_JAMMING_ATTACK' 
+  | 'PIN_ATTEMPTS_EXCEEDED' 
+  | 'SAFE_IMMOBILIZER_EXECUTED';
+
+export interface VehicleSecurityConfig {
+  vehicleId: string;
+  immobilizerStatus: ImmobilizerState;
+  pinToDriveEnabled: boolean;
+  pinCode: string; // 4-digit numeric code
+  geofenceEnabled: boolean;
+  geofenceZoneName: string;
+  geofenceRadiusKm: number;
+  centerCoordinates: { lat: number; lng: number };
+  currentCoordinates: { lat: number; lng: number; address: string; speedKmh: number };
+  canBusRelayProtection: boolean;
+  towTamperAlarm: boolean;
+  jammerDetection: boolean;
+  sentryMode: boolean;
+  valetSpeedLimitKmh: number | null;
+  theftRiskScore: number; // 0 - 100
+  lastSecurityPing: string;
+  engineRunning: boolean;
+  policeIncidentActive: boolean;
+}
+
+export interface TheftSecurityAlert {
+  id: string;
+  vehicleId: string;
+  vehicleName: string;
+  licensePlate: string;
+  timestamp: string;
+  severity: TheftThreatSeverity;
+  type: TheftThreatType;
+  title: string;
+  description: string;
+  actionTaken: string;
+  location: string;
+  speedKmh: number;
+  resolved: boolean;
+}
+
+// GPS Telematics & Real-Time Vehicle Tracking
+export type GpsConnectionStatus = 'ONLINE' | 'ACTIVE_TRIP' | 'PARKED' | 'STANDBY' | 'SIGNAL_ALERT';
+
+export interface GpsCoordinate {
+  lat: number;
+  lng: number;
+  speedKmh?: number;
+  timestamp?: string;
+  altitudeMeters?: number;
+  heading?: number; // 0 - 360 degrees
+}
+
+export interface VehicleGpsTelemetry {
+  vehicleId: string;
+  vehicleName: string;
+  licensePlate: string;
+  vin: string;
+  category: VehicleCategory;
+  imageUrl: string;
+  status: VehicleStatus;
+  gpsStatus: GpsConnectionStatus;
+  currentLocation: {
+    lat: number;
+    lng: number;
+    address: string;
+    speedKmh: number;
+    heading: number;
+    altitudeMeters: number;
+    accuracyMeters: number;
+    satellitesLocked: number;
+  };
+  activeRental?: {
+    bookingId: string;
+    bookingNumber: string;
+    renterName: string;
+    renterEmail: string;
+    renterPhone: string;
+    pickupLocation: string;
+    returnLocation: string;
+    pickupDate: string;
+    returnDate: string;
+    tripDistanceKm: number;
+    destinationEtaMinutes: number;
+  };
+  breadcrumbs: GpsCoordinate[];
+  batteryPercent: number;
+  fuelOrChargePercent: number;
+  lastPingTime: string;
+  geofenceRadiusKm: number;
+  isMoving: boolean;
+}
+
+export interface GeofenceNotification {
+  id: string;
+  vehicleId: string;
+  vehicleName: string;
+  licensePlate: string;
+  timestamp: string;
+  distanceKm: number;
+  maxRadiusKm: number;
+  excessKm: number;
+  currentAddress: string;
+  speedKmh: number;
+  autoImmobilizeTriggered: boolean;
+  acknowledged: boolean;
+  zoneName: string;
+}
+
+export interface GeofenceSurveillanceStatus {
+  vehicleId: string;
+  vehicleName: string;
+  licensePlate: string;
+  enabled: boolean;
+  zoneName: string;
+  centerCoordinates: { lat: number; lng: number };
+  currentCoordinates: { lat: number; lng: number; address: string; speedKmh: number };
+  radiusKm: number;
+  currentDistanceKm: number;
+  usagePercentage: number;
+  isBreached: boolean;
+  excessDistanceKm: number;
+  lastBreachTimestamp?: string;
+}
+
+

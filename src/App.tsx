@@ -12,6 +12,7 @@ import { MyBookingsView } from './components/customer/MyBookingsView';
 import { InvoiceModal } from './components/customer/InvoiceModal';
 import { ReviewModal } from './components/customer/ReviewModal';
 import { AuthModal, AuthMode } from './components/auth/AuthModal';
+import { WelcomePage } from './components/auth/WelcomePage';
 
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { FleetManagement } from './components/admin/FleetManagement';
@@ -20,6 +21,8 @@ import { MaintenanceManagement } from './components/admin/MaintenanceManagement'
 import { ReportsAnalytics } from './components/admin/ReportsAnalytics';
 import { PaymentsLedger } from './components/admin/PaymentsLedger';
 import { ReviewModeration } from './components/admin/ReviewModeration';
+import { AntiTheftSecurityCenter } from './components/admin/AntiTheftSecurityCenter';
+import { FleetGpsTrackingCenter } from './components/gps/FleetGpsTrackingCenter';
 
 import { JavaArchitectureExplorer } from './components/java/JavaArchitectureExplorer';
 import { SkeletonLoader } from './components/SkeletonLoader';
@@ -49,8 +52,17 @@ export default function App() {
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
   const [reviews, setReviews] = useState<VehicleReview[]>([]);
-  const [currentUser, setCurrentUser] = useState<Customer | null>(() => StorageService.getCurrentUser());
+  // User must log in first; the Sign In / Sign Up page is strictly the first page of the application
+  const [currentUser, setCurrentUser] = useState<Customer | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
+
+  // Clear any old stored user session on mount so Sign In / Sign Up is always the first screen
+  useEffect(() => {
+    try {
+      localStorage.removeItem('crms_current_user_v2_inr');
+      sessionStorage.removeItem('crms_active_session_user');
+    } catch {}
+  }, []);
 
   // Initial load from Firestore
   useEffect(() => {
@@ -88,7 +100,9 @@ export default function App() {
     'admin-maintenance' | 
     'admin-reports' | 
     'admin-payments' |
-    'admin-reviews'
+    'admin-reviews' |
+    'admin-antitheft' |
+    'admin-gps'
   >('customer-catalog');
 
   // Customer booking dates & custom manual locations
@@ -606,8 +620,33 @@ export default function App() {
     return <SkeletonLoader />;
   }
 
+  // If user is not authenticated, display the dedicated Welcome / Login & Sign Up Page
+  if (!currentUser) {
+    return (
+      <>
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-amber-500/60 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-up text-sm font-bold">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        <WelcomePage
+          onLoginSuccess={handleLoginSuccess}
+          existingCustomers={customers}
+          onCustomerCreated={(newCust) => {
+            const updated = [newCust, ...customers];
+            setCustomers(updated);
+            StorageService.saveCustomers(updated);
+          }}
+        />
+      </>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans selection:bg-amber-400 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-amber-400 selection:text-slate-950">
       {/* Primary Navigation Bar */}
       <Navbar
         activeTab={activeTab}
@@ -649,6 +688,7 @@ export default function App() {
           <MyBookingsView
             bookings={bookings}
             currentUser={currentUser}
+            vehicles={vehicles}
             reviews={reviews}
             onOpenInvoice={(booking) => setViewingInvoice(booking)}
             onOpenReviewModal={(booking, existingReview) => setReviewingBooking({ booking, existingReview })}
@@ -730,29 +770,37 @@ export default function App() {
             onDeleteReview={handleDeleteReview}
           />
         )}
+
+        {activeTab === 'admin-antitheft' && (
+          <AntiTheftSecurityCenter
+            vehicles={vehicles}
+            onOpenVehicleDetails={(veh) => setSelectedVehicleForDetails(veh)}
+            onNavigateTab={(tab) => setActiveTab(tab as any)}
+          />
+        )}
+
+        {activeTab === 'admin-gps' && (
+          <FleetGpsTrackingCenter
+            vehicles={vehicles}
+            bookings={bookings}
+            onOpenVehicleDetails={(veh) => setSelectedVehicleForDetails(veh)}
+          />
+        )}
       </main>
 
       {/* FOOTER */}
       <footer className="bg-slate-900 text-slate-400 text-xs border-t border-slate-800 py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <span className="font-bold text-white">Velocity CRMS</span>
-            <span>•</span>
-            <span>Enterprise Car Rental Management System</span>
-            <span className="ml-2 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 font-mono text-[10px] border border-emerald-800/80 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              Live Broadcast Sync
-            </span>
+            <span aria-hidden="true" className="text-slate-600">·</span>
+            <span>Car Rental Management System</span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px]">
-            <span className="text-slate-400">Powered by Java Spring Boot, JPA/Hibernate, MySQL & React</span>
-            <button
-              onClick={() => setIsJavaModalOpen(true)}
-              className="text-amber-400 hover:text-amber-300 font-semibold underline"
-            >
-              Inspect Java Architecture & APIs
-            </button>
+          <div className="flex items-center gap-3 text-[11px] text-slate-400">
+            <span>© {new Date().getFullYear()} Velocity CRMS Inc.</span>
+            <span aria-hidden="true" className="text-slate-600">·</span>
+            <span>Fleet Operations & GPS Telematics</span>
           </div>
         </div>
       </footer>

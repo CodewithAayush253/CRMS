@@ -119,7 +119,9 @@ export const StorageService = {
   },
 
   async getCustomers(): Promise<Customer[]> {
-    const list = await seedCollectionIfEmpty(COLLECTIONS.CUSTOMERS, INITIAL_CUSTOMERS);
+    let list = await seedCollectionIfEmpty(COLLECTIONS.CUSTOMERS, INITIAL_CUSTOMERS);
+    const demoIds = ['cust-1', 'cust-2', 'cust-3', 'cust-4', 'cust-5'];
+    list = list.filter(c => !demoIds.includes(c.id));
     
     // Guarantee admin
     const adminIdx = list.findIndex(c => c.email.toLowerCase() === 'av8279@admin.crms');
@@ -186,7 +188,9 @@ export const StorageService = {
 
   getCurrentUser(): Customer | null {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      // Clear legacy persistent user so opening website always shows sign in/sign up page first
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      const data = sessionStorage.getItem('crms_active_session_user');
       if (data) return JSON.parse(data);
     } catch {
       // fallback
@@ -196,8 +200,9 @@ export const StorageService = {
 
   saveCurrentUser(customer: Customer | null) {
     if (customer) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(customer));
+      sessionStorage.setItem('crms_active_session_user', JSON.stringify(customer));
     } else {
+      sessionStorage.removeItem('crms_active_session_user');
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     }
   },
