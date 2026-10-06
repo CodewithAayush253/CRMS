@@ -192,9 +192,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       const existing = existingCustomers.find(c => c.email.toLowerCase() === googleEmail.toLowerCase());
       if (existing) {
+        const updatedExisting: Customer = {
+          ...existing,
+          googleUid: user.uid,
+          isGoogleAuth: true,
+        };
         setSuccessMessage(`Authenticated successfully with Google as ${existing.name}!`);
         setTimeout(() => {
-          onLoginSuccess(existing);
+          onLoginSuccess(updatedExisting);
           onClose();
         }, 600);
         return;
@@ -204,14 +209,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         id: `cust-google-${user.uid || Date.now()}`,
         name: googleName,
         email: googleEmail,
-        phone: user.phoneNumber || '+91 98111 22334',
-        licenseNumber: 'DL-01-GOOGLE-2026',
+        phone: user.phoneNumber || '',
+        licenseNumber: '',
         role: 'ROLE_CUSTOMER',
         memberSince: new Date().toISOString().split('T')[0],
         totalRentals: 0,
         loyaltyPoints: 150,
         avatarUrl: googlePhoto,
         password: 'google-auth-secure',
+        googleUid: user.uid,
+        isGoogleAuth: true,
+        profileCompleted: false,
+        dlVerificationStatus: 'UNVERIFIED',
       };
 
       onCustomerCreated(newCustomer);
@@ -221,44 +230,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onClose();
       }, 600);
     } catch (err: any) {
-      console.warn('Google Auth popup note / unauthorized domain:', err);
-      
-      // If unauthorized domain on Vercel, provide a smooth direct Google sign-in experience
-      setSuccessMessage('Authenticating with Google account...');
-      
-      setTimeout(() => {
-        const fallbackEmail = 'google.user@gmail.com';
-        const existing = existingCustomers.find(c => c.email.toLowerCase() === fallbackEmail);
-        if (existing) {
-          setSuccessMessage(`Signed in with Google successfully as ${existing.name}!`);
-          setTimeout(() => {
-            onLoginSuccess(existing);
-            onClose();
-          }, 600);
-          return;
-        }
-
-        const newCustomer: Customer = {
-          id: `cust-google-${Date.now()}`,
-          name: 'Google Verified User',
-          email: fallbackEmail,
-          phone: '+91 98111 22334',
-          licenseNumber: 'DL-01-GOOGLE-2026',
-          role: 'ROLE_CUSTOMER',
-          memberSince: new Date().toISOString().split('T')[0],
-          totalRentals: 0,
-          loyaltyPoints: 150,
-          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          password: 'google-auth-secure',
-        };
-
-        onCustomerCreated(newCustomer);
-        setSuccessMessage(`Google account connected successfully! Welcome, ${newCustomer.name}.`);
-        setTimeout(() => {
-          onLoginSuccess(newCustomer);
-          onClose();
-        }, 600);
-      }, 800);
+      console.error('Google Auth Error:', err);
+      const errorMsg = err?.code === 'auth/unauthorized-domain' 
+        ? 'Google Login Failed: This domain is not authorized in Firebase Console (Authentication > Settings > Authorized domains).'
+        : `Google Login Failed: ${err?.message || 'Authentication popup was closed or failed.'}`;
+      setErrorMessage(errorMsg);
     }
   };
 

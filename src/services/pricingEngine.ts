@@ -35,11 +35,16 @@ export function calculateRentalPrice(
   rentalDays: number,
   insuranceType: InsuranceType,
   addOns: AddOnOptions,
-  securityDeposit: number
+  securityDeposit: number,
+  couponDiscount: number = 0,
+  couponCode?: string,
+  loyaltyPointsUsed: number = 0,
+  loyaltyDiscount: number = 0,
+  currentLoyaltyPoints: number = 0
 ): PriceCalculationResult {
   const basePrice = dailyRate * rentalDays;
 
-  // Strategy logic
+  // Strategy logic for duration
   let discountPercent = 0;
   let discountStrategy = 'Standard Rate';
 
@@ -54,8 +59,8 @@ export function calculateRentalPrice(
     discountStrategy = 'Multi-Day Advantage (5% Off)';
   }
 
-  const discountAmount = Math.round(basePrice * discountPercent * 100) / 100;
-  const discountedBase = basePrice - discountAmount;
+  const durationDiscountAmount = Math.round(basePrice * discountPercent * 100) / 100;
+  const discountedBase = basePrice - durationDiscountAmount;
 
   // Insurance cost
   const insuranceDaily = INSURANCE_RATES[insuranceType] || 0;
@@ -69,24 +74,37 @@ export function calculateRentalPrice(
   if (addOns.roadsideAssistance) addOnsDaily += ADD_ON_DAILY_RATES.roadsideAssistance;
   const addOnsTotal = addOnsDaily * rentalDays;
 
-  // Subtotal before tax
-  const subtotal = discountedBase + insuranceTotal + addOnsTotal;
-  const taxes = Math.round(subtotal * TAX_RATE * 100) / 100;
-  const totalAmount = Math.round((subtotal + taxes + securityDeposit) * 100) / 100;
+  // Pre-coupon and pre-loyalty gross subtotal
+  const grossSubtotal = discountedBase + insuranceTotal + addOnsTotal;
+
+  // Apply Coupon and Loyalty discounts
+  const effectiveDiscounts = Math.min(grossSubtotal, couponDiscount + loyaltyDiscount);
+  const netSubtotal = Math.max(0, grossSubtotal - effectiveDiscounts);
+
+  const taxes = Math.round(netSubtotal * TAX_RATE * 100) / 100;
+  const totalAmount = Math.round((netSubtotal + taxes + securityDeposit) * 100) / 100;
+
+  // Calculate points earned (1 point per ₹100 spent)
+  const loyaltyPointsEarned = Math.floor(totalAmount / 100);
 
   return {
     days: rentalDays,
     dailyRate,
     basePrice,
     discountPercent: discountPercent * 100,
-    discountAmount,
+    discountAmount: durationDiscountAmount,
     discountStrategy,
     insuranceRate: insuranceDaily,
     insuranceTotal,
     addOnsTotal,
+    couponCode: couponCode || undefined,
+    couponDiscount,
+    loyaltyPointsUsed,
+    loyaltyDiscount,
+    loyaltyPointsEarned,
     taxes,
     securityDeposit,
-    subtotal,
+    subtotal: netSubtotal,
     totalAmount,
   };
 }

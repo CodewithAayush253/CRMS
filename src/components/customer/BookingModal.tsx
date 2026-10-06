@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { 
   X, 
   Shield, 
+  ShieldCheck,
   CreditCard, 
   CheckCircle2, 
   Calendar, 
@@ -15,10 +16,18 @@ import {
   Lock,
   Percent,
   Receipt,
-  FileCheck
+  FileCheck,
+  Tag,
+  Gift,
+  Coins,
+  Sparkles,
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
-import { Vehicle, Customer, Booking, PaymentTransaction, InsuranceType, AddOnOptions } from '../../types';
+import { Vehicle, Customer, Booking, PaymentTransaction, InsuranceType, AddOnOptions, DiscountCoupon } from '../../types';
 import { calculateRentalDays, calculateRentalPrice, INSURANCE_RATES, ADD_ON_DAILY_RATES } from '../../services/pricingEngine';
+import { AVAILABLE_COUPONS, validateAndCalculateCoupon } from '../../services/couponService';
+import { getLoyaltyTier } from '../../services/loyaltyService';
 import { formatINR } from '../../utils/currency';
 
 interface BookingModalProps {
@@ -71,14 +80,69 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedBooking, setCompletedBooking] = useState<Booking | null>(null);
 
+  // Coupon Discount State
+  const [couponCodeInput, setCouponCodeInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<DiscountCoupon | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState<number>(0);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponSuccessMsg, setCouponSuccessMsg] = useState<string | null>(null);
+
+  // Velocity Loyalty Rewards State
+  const availableLoyaltyPoints = currentUser.loyaltyPoints || 0;
+  const [isRedeemingLoyalty, setIsRedeemingLoyalty] = useState(false);
+  const [loyaltyPointsToRedeem, setLoyaltyPointsToRedeem] = useState<number>(Math.min(availableLoyaltyPoints, 500));
+
   const rentalDays = calculateRentalDays(pickupDate, returnDate);
+  const rawBase = vehicle.dailyRate * rentalDays;
+  const rawSubtotal = rawBase + (INSURANCE_RATES[insuranceType] || 0) * rentalDays;
+  
+  // 1 point = 1 INR
+  const activeLoyaltyDiscount = isRedeemingLoyalty 
+    ? Math.min(loyaltyPointsToRedeem, availableLoyaltyPoints, Math.max(0, rawSubtotal - couponDiscount)) 
+    : 0;
+
   const priceCalc = calculateRentalPrice(
     vehicle.dailyRate,
     rentalDays,
     insuranceType,
     addOns,
-    vehicle.securityDeposit
+    vehicle.securityDeposit,
+    couponDiscount,
+    appliedCoupon?.code,
+    isRedeemingLoyalty ? loyaltyPointsToRedeem : 0,
+    activeLoyaltyDiscount,
+    availableLoyaltyPoints
   );
+
+  const handleApplyCoupon = (codeToApply?: string) => {
+    const targetCode = (codeToApply || couponCodeInput).trim().toUpperCase();
+    if (!targetCode) {
+      setCouponError('Please enter a coupon code.');
+      return;
+    }
+
+    setCouponError(null);
+    setCouponSuccessMsg(null);
+
+    const res = validateAndCalculateCoupon(targetCode, rawSubtotal, rentalDays, vehicle.category);
+
+    if (res.success && res.coupon) {
+      setAppliedCoupon(res.coupon);
+      setCouponDiscount(res.discountAmount);
+      setCouponSuccessMsg(res.message);
+      setCouponCodeInput(res.coupon.code);
+    } else {
+      setCouponError(res.message);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCodeInput('');
+    setCouponError(null);
+    setCouponSuccessMsg(null);
+  };
 
   const handleToggleAddOn = (key: keyof AddOnOptions) => {
     setAddOns(prev => ({ ...prev, [key]: !prev[key] }));
@@ -116,6 +180,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         insuranceCost: priceCalc.insuranceTotal,
         addOns,
         addOnsCost: priceCalc.addOnsTotal,
+        couponCode: appliedCoupon?.code,
+        couponDiscount: priceCalc.couponDiscount,
+        loyaltyPointsUsed: isRedeemingLoyalty ? loyaltyPointsToRedeem : 0,
+        loyaltyDiscount: activeLoyaltyDiscount,
+        loyaltyPointsEarned: priceCalc.loyaltyPointsEarned,
         taxes: priceCalc.taxes,
         securityDeposit: priceCalc.securityDeposit,
         totalAmount: priceCalc.totalAmount,
@@ -491,7 +560,211 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
           {/* STEP 3: Pricing Engine Breakdown & Payment */}
           {step === 3 && (
-            <div className="space-y-5">
+            <div className="space-y-4">
+              {/* Driver & Identity Verification Badge */}
+              <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-emerald-950 block">Authorized Driver: {currentUser.name}</span>
+                    <span className="text-[11px] text-emerald-800">
+                      DL: <strong className="font-mono">{currentUser.licenseNumber || 'DL-VERIFIED'}</strong> • MoRTH Endorsement: <strong>LMV (Approved)</strong>
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-2 py-0.5 rounded font-bold hidden sm:inline">
+                  {currentUser.dlVerificationDetails?.sarathiRefId || 'SARATHI-GOVT-AUDIT-OK'}
+                </span>
+              </div>
+
+              {/* DISCOUNT COUPON SECTION */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-amber-500" />
+                    <span className="font-bold text-xs text-slate-900 uppercase tracking-wider">
+                      Apply Discount Coupon
+                    </span>
+                  </div>
+                  {appliedCoupon && (
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      {appliedCoupon.code} Active
+                    </span>
+                  )}
+                </div>
+
+                {!appliedCoupon ? (
+                  <div className="space-y-2.5">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={couponCodeInput}
+                          onChange={(e) => {
+                            setCouponCodeInput(e.target.value.toUpperCase());
+                            setCouponError(null);
+                          }}
+                          placeholder="Enter coupon code (e.g. VELOCITY10)"
+                          className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold tracking-wider text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-hidden uppercase"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyCoupon()}
+                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors shrink-0"
+                      >
+                        Apply Coupon
+                      </button>
+                    </div>
+
+                    {couponError && (
+                      <p className="text-[11px] text-rose-600 font-medium flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{couponError}</span>
+                      </p>
+                    )}
+
+                    {/* Quick Available Coupons Chips */}
+                    <div className="pt-0.5">
+                      <span className="text-[10px] font-bold text-slate-500 block mb-1.5">
+                        Available Coupons for this booking:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {AVAILABLE_COUPONS.map((cpn) => (
+                          <button
+                            key={cpn.code}
+                            type="button"
+                            onClick={() => handleApplyCoupon(cpn.code)}
+                            className="text-[10px] px-2.5 py-1 bg-white hover:bg-amber-50 text-slate-800 border border-slate-200 hover:border-amber-400 rounded-lg transition-colors font-medium flex items-center gap-1.5 shadow-2xs"
+                            title={cpn.description}
+                          >
+                            <span className="font-mono font-bold text-amber-700">{cpn.code}</span>
+                            <span className="text-slate-500">
+                              ({cpn.discountType === 'PERCENTAGE' ? `${cpn.discountValue}% Off` : `₹${cpn.discountValue} Off`})
+                            </span>
+                            {cpn.badge && (
+                              <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1 rounded">
+                                {cpn.badge}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-950">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-600" />
+                      <div>
+                        <span className="font-bold">{appliedCoupon.title}</span>
+                        <p className="text-[11px] text-emerald-800">{appliedCoupon.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-black text-emerald-700 text-sm">-{formatINR(priceCalc.couponDiscount)}</span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="text-xs text-rose-600 hover:text-rose-700 font-bold underline flex items-center gap-0.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* LOYALTY PROGRAM REDEMPTION SECTION */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-amber-500" />
+                    <span className="font-bold text-xs text-slate-900 uppercase tracking-wider">
+                      Velocity Loyalty Rewards Program
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-slate-500 font-medium">Your Balance:</span>
+                    <span className="font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full text-[11px]">
+                      {availableLoyaltyPoints} Pts ({formatINR(availableLoyaltyPoints)})
+                    </span>
+                  </div>
+                </div>
+
+                {availableLoyaltyPoints > 0 ? (
+                  <div className="space-y-2.5">
+                    <label className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-amber-50/40 transition-colors">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isRedeemingLoyalty}
+                          onChange={(e) => {
+                            setIsRedeemingLoyalty(e.target.checked);
+                            if (e.target.checked && loyaltyPointsToRedeem === 0) {
+                              setLoyaltyPointsToRedeem(Math.min(availableLoyaltyPoints, Math.floor(rawSubtotal)));
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
+                        />
+                        <span className="text-xs font-bold text-slate-800">
+                          Redeem Points for Direct Cash Discount (1 Pt = ₹1)
+                        </span>
+                      </div>
+                      {isRedeemingLoyalty && (
+                        <span className="text-xs font-bold text-emerald-700">
+                          -{formatINR(priceCalc.loyaltyDiscount)}
+                        </span>
+                      )}
+                    </label>
+
+                    {isRedeemingLoyalty && (
+                      <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2 text-xs">
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="font-medium text-slate-700">Select Points to Redeem:</span>
+                          <span className="font-bold font-mono text-amber-800">
+                            {loyaltyPointsToRedeem} Points = {formatINR(loyaltyPointsToRedeem)} Off
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="10"
+                          max={Math.min(availableLoyaltyPoints, Math.floor(rawSubtotal))}
+                          step="10"
+                          value={loyaltyPointsToRedeem}
+                          onChange={(e) => setLoyaltyPointsToRedeem(parseInt(e.target.value, 10))}
+                          className="w-full accent-amber-500"
+                        />
+                        <div className="flex justify-end gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setLoyaltyPointsToRedeem(Math.min(100, availableLoyaltyPoints))}
+                            className="text-[10px] px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-700 font-medium"
+                          >
+                            100 Pts (₹100)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLoyaltyPointsToRedeem(Math.min(availableLoyaltyPoints, Math.floor(rawSubtotal)))}
+                            className="text-[10px] px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded font-bold"
+                          >
+                            Redeem Max ({Math.min(availableLoyaltyPoints, Math.floor(rawSubtotal))} Pts)
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    You have 0 points. Complete this reservation to start earning rewards!
+                  </p>
+                )}
+              </div>
+
               {/* Itemized Price Calculation */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-2">
                 <div className="flex justify-between items-center pb-2 border-b border-slate-200">
@@ -510,6 +783,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <div className="flex justify-between text-emerald-700 font-semibold">
                     <span>Duration Discount ({priceCalc.discountPercent}% off):</span>
                     <span>-{formatINR(priceCalc.discountAmount)}</span>
+                  </div>
+                )}
+
+                {priceCalc.couponDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-semibold">
+                    <span>Discount Coupon ({priceCalc.couponCode}):</span>
+                    <span>-{formatINR(priceCalc.couponDiscount)}</span>
+                  </div>
+                )}
+
+                {priceCalc.loyaltyDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-semibold">
+                    <span>Loyalty Points Credit ({priceCalc.loyaltyPointsUsed} pts):</span>
+                    <span>-{formatINR(priceCalc.loyaltyDiscount)}</span>
                   </div>
                 )}
 
@@ -538,6 +825,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div className="flex justify-between items-center pt-1 text-sm font-black text-slate-900">
                   <span>Total Amount Due (including deposit):</span>
                   <span className="text-base text-amber-600 font-black">{formatINR(priceCalc.totalAmount)}</span>
+                </div>
+
+                {/* Loyalty points earned notice */}
+                <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px] font-bold text-amber-800 bg-amber-100/60 p-2 rounded-xl">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    Trip Rewards:
+                  </span>
+                  <span>+{priceCalc.loyaltyPointsEarned} Loyalty Points Credited on Checkout</span>
                 </div>
               </div>
 

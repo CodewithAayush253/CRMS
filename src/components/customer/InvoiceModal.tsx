@@ -138,6 +138,26 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ booking, onClose }) 
                   </tr>
                 )}
 
+                {booking.couponDiscount !== undefined && booking.couponDiscount > 0 && (
+                  <tr className="text-emerald-700 bg-emerald-50/60">
+                    <td className="p-2.5">
+                      <span className="font-semibold">Promo Discount Coupon ({booking.couponCode || 'PROMO'})</span>
+                    </td>
+                    <td className="p-2.5 text-center">Promo Code</td>
+                    <td className="p-2.5 text-right font-semibold">-{formatINR(booking.couponDiscount)}</td>
+                  </tr>
+                )}
+
+                {booking.loyaltyDiscount !== undefined && booking.loyaltyDiscount > 0 && (
+                  <tr className="text-emerald-700 bg-emerald-50/60">
+                    <td className="p-2.5">
+                      <span className="font-semibold">Velocity Rewards Credit ({booking.loyaltyPointsUsed || 0} pts)</span>
+                    </td>
+                    <td className="p-2.5 text-center">Loyalty Club</td>
+                    <td className="p-2.5 text-right font-semibold">-{formatINR(booking.loyaltyDiscount)}</td>
+                  </tr>
+                )}
+
                 {booking.insuranceCost > 0 && (
                   <tr>
                     <td className="p-2.5">

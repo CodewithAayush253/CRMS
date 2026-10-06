@@ -13,6 +13,8 @@ import { InvoiceModal } from './components/customer/InvoiceModal';
 import { ReviewModal } from './components/customer/ReviewModal';
 import { AuthModal, AuthMode } from './components/auth/AuthModal';
 import { WelcomePage } from './components/auth/WelcomePage';
+import { CustomerVerificationModal } from './components/verification/CustomerVerificationModal';
+import { LoyaltyProgramModal } from './components/customer/LoyaltyProgramModal';
 
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { FleetManagement } from './components/admin/FleetManagement';
@@ -123,6 +125,13 @@ export default function App() {
   const [viewingInvoice, setViewingInvoice] = useState<Booking | null>(null);
   const [reviewingBooking, setReviewingBooking] = useState<{ booking: Booking; existingReview?: VehicleReview } | null>(null);
   const [isJavaModalOpen, setIsJavaModalOpen] = useState(false);
+
+  // Customer Identity & MoRTH DL Verification Modal State
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState<boolean>(false);
+  const [verificationVehicleBlocked, setVerificationVehicleBlocked] = useState<string | null>(null);
+
+  // Velocity Rewards Loyalty Program Modal State
+  const [isLoyaltyModalOpen, setIsLoyaltyModalOpen] = useState<boolean>(false);
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -254,9 +263,11 @@ export default function App() {
       setActiveTab('admin-dashboard');
       showToast(`Admin Console Unlocked: Welcome back, ${user.name}`);
     } else {
-      showToast(`Welcome, ${user.name}! Customer account verified.`);
-      // If customer was in the middle of booking a car, open the booking wizard
-      if (pendingBookingVehicle) {
+      showToast(`Welcome, ${user.name}! Customer account signed in.`);
+      // Check if customer requires KYC Profile or Driving Licence verification
+      if (!user.profileCompleted || user.dlVerificationStatus !== 'VERIFIED') {
+        setIsVerificationModalOpen(true);
+      } else if (pendingBookingVehicle) {
         setSelectedVehicleForBooking(pendingBookingVehicle);
         setPendingBookingVehicle(null);
       }
@@ -277,11 +288,32 @@ export default function App() {
     StorageService.saveCustomers([newCustomer, ...customers]);
   };
 
-  // Book Vehicle guard
+  // Verification flow completed by customer
+  const handleVerificationComplete = (updatedCustomer: Customer) => {
+    setCurrentUser(updatedCustomer);
+    StorageService.setCurrentUser(updatedCustomer);
+    setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+    StorageService.saveCustomers(customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+    showToast(`✓ Identity & MoRTH Driving Licence Verified! Rental clearance granted.`);
+
+    // If customer was in middle of booking a car, open the booking wizard
+    if (pendingBookingVehicle) {
+      setSelectedVehicleForBooking(pendingBookingVehicle);
+      setPendingBookingVehicle(null);
+      setVerificationVehicleBlocked(null);
+    }
+  };
+
+  // Book Vehicle guard: Enforces Government DL Verification before allowing rental
   const handleBookVehicle = (veh: Vehicle) => {
     if (!currentUser) {
       setPendingBookingVehicle(veh);
       handleOpenAuth('CUSTOMER_SIGNUP', `book the ${veh.year} ${veh.make} ${veh.model}`);
+    } else if (currentUser.role === 'ROLE_CUSTOMER' && (!currentUser.profileCompleted || currentUser.dlVerificationStatus !== 'VERIFIED')) {
+      setPendingBookingVehicle(veh);
+      setVerificationVehicleBlocked(`${veh.year} ${veh.make} ${veh.model}`);
+      setIsVerificationModalOpen(true);
+      showToast('MoRTH Driving Licence verification required before renting a car.');
     } else {
       setSelectedVehicleForBooking(veh);
     }
@@ -296,6 +328,24 @@ export default function App() {
     setVehicles(prev => prev.map(v => 
       v.id === newBooking.vehicleId ? { ...v, status: 'RENTED' } : v
     ));
+
+    // Update customer loyalty points (points earned minus points redeemed)
+    if (currentUser) {
+      const pointsEarned = newBooking.loyaltyPointsEarned || 0;
+      const pointsUsed = newBooking.loyaltyPointsUsed || 0;
+      const netPoints = Math.max(0, (currentUser.loyaltyPoints || 0) - pointsUsed + pointsEarned);
+
+      const updatedCustomer: Customer = {
+        ...currentUser,
+        loyaltyPoints: netPoints,
+        totalRentals: (currentUser.totalRentals || 0) + 1,
+      };
+
+      setCurrentUser(updatedCustomer);
+      StorageService.setCurrentUser(updatedCustomer);
+      setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+      StorageService.saveCustomers(customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+    }
 
     // Broadcast instant availability update across all open tabs/users
     realtimeFleetService.broadcast({
@@ -656,6 +706,8 @@ export default function App() {
         onLogout={handleLogout}
         onOpenJavaModal={() => setIsJavaModalOpen(true)}
         onResetData={handleResetData}
+        onOpenVerificationModal={() => setIsVerificationModalOpen(true)}
+        onOpenLoyaltyModal={() => setIsLoyaltyModalOpen(true)}
         activeBookingsCount={activeCustomerBookingsCount}
         pendingReviewsCount={pendingReviewsCount}
       />
@@ -681,6 +733,7 @@ export default function App() {
             onRequestAuth={handleOpenAuth}
             onSelectVehicle={(veh) => setSelectedVehicleForDetails(veh)}
             onBookVehicle={handleBookVehicle}
+            onOpenVerificationModal={() => setIsVerificationModalOpen(true)}
           />
         )}
 
@@ -872,6 +925,32 @@ export default function App() {
         existingCustomers={customers}
         onCustomerCreated={handleCustomerCreated}
       />
+
+      {/* 7. Government-Authorized Customer Profile & DL Verification Modal */}
+      {currentUser && (
+        <CustomerVerificationModal
+          isOpen={isVerificationModalOpen}
+          currentUser={currentUser}
+          onClose={() => {
+            setIsVerificationModalOpen(false);
+            setVerificationVehicleBlocked(null);
+          }}
+          onVerificationComplete={handleVerificationComplete}
+          requiredForRentalVehicleName={verificationVehicleBlocked}
+        />
+      )}
+
+      {/* 8. Velocity Rewards Loyalty Program Modal */}
+      {currentUser && (
+        <LoyaltyProgramModal
+          isOpen={isLoyaltyModalOpen}
+          currentUser={currentUser}
+          onClose={() => setIsLoyaltyModalOpen(false)}
+          onStartBooking={() => {
+            setActiveTab('customer-catalog');
+          }}
+        />
+      )}
 
       {/* Floating Action Toast Notification */}
       {toastMessage && (

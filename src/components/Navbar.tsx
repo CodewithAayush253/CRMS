@@ -23,6 +23,8 @@ interface NavbarProps {
   onLogout: () => void;
   onOpenJavaModal?: () => void;
   onResetData?: () => void;
+  onOpenVerificationModal?: () => void;
+  onOpenLoyaltyModal?: () => void;
   activeBookingsCount: number;
   pendingReviewsCount?: number;
 }
@@ -35,6 +37,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onOpenJavaModal,
   onResetData,
+  onOpenVerificationModal,
+  onOpenLoyaltyModal,
   activeBookingsCount,
   pendingReviewsCount = 0,
 }) => {
@@ -203,7 +207,45 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : isCustomer ? (
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-xs">
+                {/* Verification Status Badge */}
+                {currentUser.dlVerificationStatus === 'VERIFIED' ? (
+                  <button
+                    type="button"
+                    onClick={onOpenVerificationModal}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold hover:bg-emerald-500/25 transition-colors"
+                    title="MoRTH Sarathi LMV Driving Licence Verified"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="hidden lg:inline">DL Verified (Sarathi)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onOpenVerificationModal}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[11px] font-bold hover:bg-amber-500/30 transition-colors animate-pulse"
+                    title="Complete KYC Profile & Driving Licence Verification to rent vehicles"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Verify Profile & DL</span>
+                  </button>
+                )}
+
+                {/* Loyalty Program Points Badge */}
+                <button
+                  type="button"
+                  onClick={onOpenLoyaltyModal}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[11px] font-bold hover:bg-amber-400/20 transition-colors"
+                  title="View Velocity Rewards Loyalty Tier & Benefits"
+                >
+                  <Award className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{currentUser.loyaltyPoints || 0} pts</span>
+                </button>
+
+                <div 
+                  onClick={onOpenLoyaltyModal}
+                  className="flex items-center gap-2 text-xs cursor-pointer hover:opacity-85 transition-opacity"
+                  title="Click to view Loyalty Profile & Tier"
+                >
                   <img
                     src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
                     alt={currentUser.name}
@@ -211,8 +253,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   />
                   <div className="text-left hidden md:block">
                     <p className="font-semibold text-white leading-tight">{currentUser.name}</p>
-                    <p className="text-[11px] text-slate-400">
-                      {currentUser.loyaltyPoints || 100} pts
+                    <p className="text-[11px] text-amber-400/90 font-medium flex items-center gap-1">
+                      <span>Rewards Member</span>
                     </p>
                   </div>
                 </div>

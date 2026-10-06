@@ -45,6 +45,7 @@ interface VehicleCatalogProps {
   onRequestAuth: (mode: 'CUSTOMER_SIGNUP' | 'CUSTOMER_LOGIN' | 'ADMIN_LOGIN', task: string) => void;
   onSelectVehicle: (vehicle: Vehicle) => void;
   onBookVehicle: (vehicle: Vehicle) => void;
+  onOpenVerificationModal?: () => void;
 }
 
 const CATEGORIES: (VehicleCategory | 'All')[] = [
@@ -75,6 +76,7 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
   onRequestAuth,
   onSelectVehicle,
   onBookVehicle,
+  onOpenVerificationModal,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory | 'All'>('All');
@@ -168,6 +170,38 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Verification Notice Banner if Customer is Unverified */}
+      {currentUser && currentUser.role === 'ROLE_CUSTOMER' && (!currentUser.profileCompleted || currentUser.dlVerificationStatus !== 'VERIFIED') && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-500/20 border border-amber-400/40 rounded-2xl p-4 sm:p-5 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-bold shadow-xs">
+              <ShieldAlert className="w-5 h-5 text-slate-950" />
+            </div>
+            <div>
+              <h4 className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-2">
+                <span>Identity & Driving Licence Verification Required</span>
+                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                  MoRTH Compliance
+                </span>
+              </h4>
+              <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5">
+                To prevent fraudulent rentals, Indian transport regulations require a verified profile and automated Parivahan Sarathi LMV Driving Licence verification before vehicle reservation.
+              </p>
+            </div>
+          </div>
+          {onOpenVerificationModal && (
+            <button
+              type="button"
+              onClick={onOpenVerificationModal}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1.5 shadow-xs"
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <span>Verify Profile & DL Now</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header & Date/Location Selection Engine */}
       <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white border border-slate-800 shadow-xs">
         <div className="max-w-3xl mb-6">

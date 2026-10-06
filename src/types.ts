@@ -30,6 +30,24 @@ export interface Vehicle {
 
 export type UserRole = 'ROLE_CUSTOMER' | 'ROLE_ADMIN';
 
+export interface DLVerificationDetails {
+  sarathiRefId: string;
+  dlNumber: string;
+  holderName: string;
+  fatherOrSpouseName?: string;
+  dateOfBirth: string;
+  issuingRto: string;
+  issuingState: string;
+  issueDate: string;
+  validUntil: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'INVALID_CLASS';
+  vehicleClasses: string[]; // e.g. ['MCWG', 'LMV', 'LMV-NT']
+  isLmvEndorsed: boolean;
+  verifiedAt: string;
+  verificationAgency: string; // e.g. 'Parivahan Sarathi National Registry (MoRTH Authorized API)'
+  digiLockerLinked?: boolean;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -42,6 +60,15 @@ export interface Customer {
   loyaltyPoints: number;
   avatarUrl: string;
   password?: string;
+
+  // Real Identity & Verification Flow Fields
+  googleUid?: string;
+  isGoogleAuth?: boolean;
+  address?: string;
+  dateOfBirth?: string;
+  profileCompleted?: boolean;
+  dlVerificationStatus?: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  dlVerificationDetails?: DLVerificationDetails;
 }
 
 export type InsuranceType = 'BASIC' | 'PREMIUM' | 'COLLISION_WAIVER';
@@ -87,6 +114,13 @@ export interface Booking {
   taxes: number;
   securityDeposit: number;
   totalAmount: number;
+
+  // Coupon & Loyalty Program
+  couponCode?: string;
+  couponDiscount?: number;
+  loyaltyPointsUsed?: number;
+  loyaltyDiscount?: number;
+  loyaltyPointsEarned?: number;
   
   // Late fees & adjustments on return
   hoursLate?: number;
@@ -153,10 +187,43 @@ export interface PriceCalculationResult {
   insuranceRate: number;
   insuranceTotal: number;
   addOnsTotal: number;
+  couponCode?: string;
+  couponDiscount: number;
+  loyaltyPointsUsed: number;
+  loyaltyDiscount: number;
+  loyaltyPointsEarned: number;
   taxes: number;
   securityDeposit: number;
   subtotal: number;
   totalAmount: number;
+}
+
+export interface DiscountCoupon {
+  code: string;
+  title: string;
+  description: string;
+  discountType: 'PERCENTAGE' | 'FLAT_INR';
+  discountValue: number; // e.g. 10 (10%) or 500 (₹500)
+  minSubtotal?: number;
+  minDays?: number;
+  maxDiscount?: number;
+  applicableCategory?: VehicleCategory | 'ALL';
+  expiresAt?: string;
+  badge?: string;
+}
+
+export type LoyaltyTierName = 'SILVER' | 'GOLD' | 'PLATINUM';
+
+export interface LoyaltyTierInfo {
+  tier: LoyaltyTierName;
+  label: string;
+  minPoints: number;
+  maxPoints?: number;
+  multiplier: number; // e.g. 1x, 1.5x, 2x
+  extraDiscountPercent: number;
+  badgeColor: string;
+  cardGradient: string;
+  perks: string[];
 }
 
 export type ReviewModerationStatus = 'APPROVED' | 'PENDING' | 'FLAGGED' | 'REJECTED';
