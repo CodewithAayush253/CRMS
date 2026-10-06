@@ -129,37 +129,6 @@ export async function verifyDrivingLicenceWithGovtAPI(
   const stateCode = formatCheck.stateCode || cleanDL.substring(0, 2);
   const rtoInfo = INDIAN_RTO_MAP[stateCode] || { state: 'India', sampleRtos: [`${stateCode}-01 Regional Transport Office`] };
 
-  // Check for test preset known rejection cases
-  if (cleanDL.includes('0033918') || cleanDL.includes('UP-16-2021')) {
-    return {
-      success: false,
-      errorCode: 'NO_LMV_ENDORSEMENT',
-      message: 'MoRTH Endorsement Violation: This driving licence is endorsed ONLY for two-wheelers (MCWG - Motorcycle with Gear). It lacks Light Motor Vehicle (LMV / Car) endorsement and cannot be used for car rentals.',
-      auditLog: {
-        requestId: `REQ-SARATHI-CLASS-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        gatewayEndpoint: 'https://sarathi.parivahan.gov.in/api/v2/dl-auth-verify',
-        latencyMs: 1390,
-        securitySeal: 'SARATHI-LMV-MISSING-FLAG',
-      },
-    };
-  }
-
-  if (cleanDL.includes('0004910') || cleanDL.includes('2002-0004910')) {
-    return {
-      success: false,
-      errorCode: 'EXPIRED_LICENCE',
-      message: 'Licence Status Expired: National Register shows this Driving Licence expired on 2024-03-31 and has not been renewed at the RTO.',
-      auditLog: {
-        requestId: `REQ-SARATHI-EXP-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        gatewayEndpoint: 'https://sarathi.parivahan.gov.in/api/v2/dl-auth-verify',
-        latencyMs: 1380,
-        securitySeal: 'MORTH-STATUS-EXPIRED',
-      },
-    };
-  }
-
   // Derive RTO Office name from DL code
   const rtoCodeDigits = cleanDL.split('-')[1] || cleanDL.substring(2, 4);
   const matchedRtoName = rtoInfo.sampleRtos.find(r => r.includes(`${stateCode}-${rtoCodeDigits}`)) || `${stateCode}-${rtoCodeDigits} Central RTO, ${rtoInfo.state}`;

@@ -21,7 +21,11 @@ import {
   RefreshCw, 
   QrCode, 
   Lock,
-  BadgeAlert
+  BadgeAlert,
+  MessageSquare,
+  Copy,
+  Smartphone,
+  Info
 } from 'lucide-react';
 import { Customer, DLVerificationDetails } from '../../types';
 import { 
@@ -32,7 +36,19 @@ import {
   DLVerificationResponse
 } from '../../services/dlVerificationService';
 import { auth, googleProvider } from '../../lib/firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber, 
+  ConfirmationResult 
+} from 'firebase/auth';
+
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier;
+    confirmationResult?: ConfirmationResult;
+  }
+}
 
 interface CustomerVerificationModalProps {
   isOpen: boolean;
@@ -64,10 +80,18 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [address, setAddress] = useState(currentUser.address || '');
   const [dob, setDob] = useState(currentUser.dateOfBirth || '');
-  const [phoneOtpVerified, setPhoneOtpVerified] = useState(!!currentUser.phone);
+  
+  // Real Cellular SMS OTP State (Firebase Phone Authentication)
+  const [phoneOtpVerified, setPhoneOtpVerified] = useState(!!currentUser.phone && !!currentUser.profileCompleted);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [otpInput, setOtpInput] = useState('');
   const [showOtpField, setShowOtpField] = useState(false);
-  const [otpSentMsg, setOtpSentMsg] = useState(false);
+  const [isOtpSending, setIsOtpSending] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSuccessMsg, setOtpSuccessMsg] = useState<string | null>(null);
+  const [phoneSentTo, setPhoneSentTo] = useState<string | null>(null);
 
   // DL Verification Fields
   const [dlNumber, setDlNumber] = useState(currentUser.licenseNumber || '');
@@ -85,17 +109,124 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
   // Calculate user age
   const userAge = calculateAge(dob);
 
-  // Handle OTP Simulation
-  const handleSendOtp = () => {
-    setShowOtpField(true);
-    setOtpSentMsg(true);
-    setTimeout(() => setOtpSentMsg(false), 4000);
+  // Resend Countdown Timer effect
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [otpCountdown]);
+
+  // Format Indian phone number to international E.164 standard (+91XXXXXXXXXX)
+  const formatIndianPhoneE164 = (raw: string): string => {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 10) return `+91${digits}`;
+    if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+    if (raw.trim().startsWith('+')) return `+${digits}`;
+    return `+91${digits.slice(-10)}`;
   };
 
-  const handleVerifyOtp = () => {
-    if (otpInput.trim().length >= 4) {
+  // Initialize or retrieve reCAPTCHA verifier
+  const getOrCreateRecaptcha = (): RecaptchaVerifier => {
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {
+        // cleanup if needed
+      }
+    }
+    const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => {
+        // reCAPTCHA solved
+      },
+      'expired-callback': () => {
+        setOtpError('Security verification expired. Please click Send OTP again.');
+      }
+    });
+    window.recaptchaVerifier = verifier;
+    return verifier;
+  };
+
+  // Dispatch real SMS to the user's mobile number via Firebase Authentication
+  const handleSendOtp = async (targetPhone?: string) => {
+    const rawNumber = targetPhone || phone;
+    const cleanDigits = rawNumber.replace(/\D/g, '');
+    if (cleanDigits.length < 10) {
+      setOtpError('Please enter a valid 10-digit Indian mobile number (e.g. +91 98765 43210).');
+      return;
+    }
+
+    const formattedE164 = formatIndianPhoneE164(rawNumber);
+    setIsOtpSending(true);
+    setOtpError(null);
+    setOtpSuccessMsg(null);
+
+    try {
+      const verifier = getOrCreateRecaptcha();
+      const result = await signInWithPhoneNumber(auth, formattedE164, verifier);
+      setConfirmationResult(result);
+      window.confirmationResult = result;
+      setPhoneSentTo(formattedE164);
+      setShowOtpField(true);
+      setOtpCountdown(60);
+      setIsOtpSending(false);
+      setOtpSuccessMsg(`SMS OTP dispatched to your mobile number (${formattedE164}). Check your SMS inbox!`);
+    } catch (err: any) {
+      setIsOtpSending(false);
+      console.error('Firebase Phone Auth Error:', err);
+
+      if (err?.code === 'auth/operation-not-allowed') {
+        setOtpError(
+          'Phone Sign-In is not enabled in your Firebase Project Console (crms-95421). In Firebase Console -> Authentication -> Sign-in method, click "Phone" and enable it. (You can also add free Test phone numbers with static OTPs there).'
+        );
+      } else if (err?.code === 'auth/invalid-phone-number') {
+        setOtpError('Invalid mobile number format. Please ensure your Indian number has 10 valid digits.');
+      } else if (err?.code === 'auth/quota-exceeded') {
+        setOtpError('SMS quota exceeded for Firebase project. Please check Firebase Console SMS limits.');
+      } else if (err?.code === 'auth/captcha-check-failed') {
+        setOtpError('Security reCAPTCHA check failed. Please refresh the page and try again.');
+      } else {
+        setOtpError(err?.message || 'Failed to dispatch SMS to your phone number. Please try again.');
+      }
+    }
+  };
+
+  // Verify the OTP code that the user received on their mobile phone via SMS
+  const handleVerifyOtp = async () => {
+    const code = otpInput.trim();
+    setOtpError(null);
+
+    if (!code || code.length < 6) {
+      setOtpError('Please enter the complete 6-digit OTP code received on your mobile phone via SMS.');
+      return;
+    }
+
+    if (!confirmationResult) {
+      setOtpError('No active SMS verification session found. Please click Send OTP again.');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      await confirmationResult.confirm(code);
+      setIsVerifyingOtp(false);
       setPhoneOtpVerified(true);
       setShowOtpField(false);
+      setOtpSuccessMsg(`Mobile number ${phone} successfully verified via SMS!`);
+      setTimeout(() => setOtpSuccessMsg(null), 5000);
+    } catch (err: any) {
+      setIsVerifyingOtp(false);
+      console.error('OTP confirmation error:', err);
+
+      if (err?.code === 'auth/invalid-verification-code') {
+        setOtpError('Incorrect OTP entered! The code does not match the SMS sent to your phone. Please check your SMS inbox and re-enter.');
+      } else if (err?.code === 'auth/code-expired') {
+        setOtpError('The verification code has expired. Please click Resend OTP to receive a new SMS.');
+      } else {
+        setOtpError(err?.message || 'Verification failed. Please check the code received on your phone and try again.');
+      }
     }
   };
 
@@ -105,6 +236,13 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
     if (!name.trim()) return;
     if (userAge < 18) {
       alert('The applicant must be at least 18 years old to drive or rent a motor vehicle in India.');
+      return;
+    }
+    if (!phoneOtpVerified) {
+      setOtpError('Indian motor rental regulations require mobile number verification via SMS OTP.');
+      if (!showOtpField) {
+        handleSendOtp();
+      }
       return;
     }
     setStep(3);
@@ -304,153 +442,244 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
 
           {/* STEP 2: Customer Profile (Name, Phone, Address, DOB) */}
           {step === 2 && (
-            <form onSubmit={handleProceedToDL} className="space-y-4 animate-fade-in">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Full Name */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Full Legal Name (as per Govt ID)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Aayush Verma"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-hidden"
-                    />
-                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="space-y-4 animate-fade-in">
+              {/* Invisible Firebase reCAPTCHA container */}
+              <div id="recaptcha-container"></div>
+
+              {/* Success alert when OTP confirmed */}
+              {otpSuccessMsg && (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex items-center gap-2 animate-fade-in font-medium shadow-xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{otpSuccessMsg}</span>
+                </div>
+              )}
+
+              {/* Error Alert */}
+              {otpError && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 flex items-start gap-2.5 animate-shake font-medium shadow-xs">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p>{otpError}</p>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleProceedToDL} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Full Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Full Legal Name (as per Govt ID)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. Aayush Verma"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-hidden"
+                      />
+                      <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  {/* Date of Birth */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-slate-700">
+                        Date of Birth
+                      </label>
+                      <span className="text-[10px] text-slate-500 font-semibold">
+                        Age: <strong className={userAge >= 18 ? 'text-emerald-600' : 'text-rose-600'}>{isNaN(userAge) ? '--' : `${userAge} yrs`}</strong>
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        required
+                        value={dob}
+                        onChange={(e) => setDob(e.target.value)}
+                        max={new Date().toISOString().split('T')[0]}
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-hidden"
+                      />
+                      <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
                 </div>
 
-                {/* Date of Birth */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-700">
-                      Date of Birth
+                {/* Mobile Number & Real Cellular SMS OTP Verification Section */}
+                <div className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Mobile Number (India) & SMS OTP Verification
                     </label>
                     <span className="text-[10px] text-slate-500 font-semibold">
-                      Age: <strong className={userAge >= 18 ? 'text-emerald-600' : 'text-rose-600'}>{isNaN(userAge) ? '--' : `${userAge} yrs`}</strong>
+                      Required for rental clearance
                     </span>
                   </div>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      required
-                      value={dob}
-                      onChange={(e) => setDob(e.target.value)}
-                      max={new Date().toISOString().split('T')[0]}
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-hidden"
-                    />
-                    <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
-              </div>
 
-              {/* Mobile Number & OTP */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Mobile Number (India)
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="tel"
-                      required
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(e.target.value);
-                        setPhoneOtpVerified(false);
-                      }}
-                      placeholder="+91 98765 43210"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-hidden"
-                    />
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          setPhoneOtpVerified(false);
+                          setOtpError(null);
+                        }}
+                        placeholder="+91 98765 43210"
+                        className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                      />
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    </div>
+
+                    {!phoneOtpVerified ? (
+                      <button
+                        type="button"
+                        onClick={() => handleSendOtp()}
+                        disabled={isOtpSending}
+                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+                        <span>{isOtpSending ? 'Sending SMS...' : showOtpField ? 'Resend SMS' : 'Send SMS OTP'}</span>
+                      </button>
+                    ) : (
+                      <div className="px-3 py-2 bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Phone Verified ✓</span>
+                      </div>
+                    )}
                   </div>
 
-                  {!phoneOtpVerified ? (
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors shrink-0"
-                    >
-                      Verify via OTP
-                    </button>
-                  ) : (
-                    <div className="px-3 py-2 bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>OTP Verified</span>
+                  {/* When Phone is already verified */}
+                  {phoneOtpVerified && (
+                    <div className="flex items-center justify-between pt-1 text-[11px] text-emerald-700 font-medium">
+                      <span>✓ Mobile number ({phone}) verified with SMS OTP.</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhoneOtpVerified(false);
+                          setShowOtpField(false);
+                          setConfirmationResult(null);
+                          setOtpInput('');
+                        }}
+                        className="text-slate-500 hover:text-slate-800 underline font-semibold ml-2"
+                      >
+                        Change number
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Cellular SMS OTP Input Section */}
+                  {showOtpField && !phoneOtpVerified && (
+                    <div className="p-3.5 bg-amber-50/90 border border-amber-300 rounded-2xl space-y-3 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                          <Smartphone className="w-4 h-4 text-amber-600" />
+                          Enter OTP Received on Your Mobile Phone
+                        </span>
+
+                        <span className="text-[11px] font-semibold text-amber-800 bg-amber-200/70 border border-amber-300 px-2 py-0.5 rounded-md">
+                          SMS Sent to: {phoneSentTo || phone}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={otpInput}
+                          onChange={(e) => {
+                            setOtpInput(e.target.value.replace(/\D/g, ''));
+                            setOtpError(null);
+                          }}
+                          placeholder="Enter 6-digit OTP"
+                          className="w-44 px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-base font-bold text-center tracking-widest text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-amber-500 shadow-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={isVerifyingOtp}
+                          className="px-5 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                        >
+                          {isVerifyingOtp ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Verifying...</span>
+                            </>
+                          ) : (
+                            <span>Confirm & Verify OTP</span>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Resend Timer & Carrier Notice */}
+                      <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between text-xs text-slate-600 flex-wrap gap-2">
+                        <span className="text-[11px]">
+                          Didn't receive SMS on your phone?{' '}
+                          {otpCountdown > 0 ? (
+                            <span className="text-slate-500 font-semibold">Resend in {otpCountdown}s</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSendOtp()}
+                              className="text-amber-800 font-bold hover:underline"
+                            >
+                              Resend SMS OTP
+                            </button>
+                          )}
+                        </span>
+
+                        <span className="text-[10px] text-amber-800 font-medium">
+                          Check your mobile phone's SMS inbox
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {otpSentMsg && (
-                  <p className="text-[11px] text-emerald-700 mt-1 font-medium animate-fade-in flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Verification OTP sent to {phone}. Please enter the 4-digit code.</span>
-                  </p>
-                )}
-
-                {showOtpField && !phoneOtpVerified && (
-                  <div className="mt-2 p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center gap-2">
-                    <input
-                      type="text"
-                      maxLength={4}
-                      value={otpInput}
-                      onChange={(e) => setOtpInput(e.target.value)}
-                      placeholder="Enter 4-digit OTP"
-                      className="w-36 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-center tracking-widest focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                {/* Residential Address */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Full Residential Address (in India)
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      rows={2}
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="House/Flat No., Street, Landmark, City, State, PIN Code"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-hidden resize-none"
                     />
-                    <button
-                      type="button"
-                      onClick={handleVerifyOtp}
-                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold"
-                    >
-                      Confirm OTP
-                    </button>
+                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   </div>
-                )}
-              </div>
-
-              {/* Residential Address */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Full Residential Address (in India)
-                </label>
-                <div className="relative">
-                  <textarea
-                    rows={2}
-                    required
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="House/Flat No., Street, Landmark, City, State, PIN Code"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-hidden resize-none"
-                  />
-                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back</span>
-                </button>
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back</span>
+                  </button>
 
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 transition-all shadow-md shadow-amber-500/10"
-                >
-                  <span>Proceed to DL Verification</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </form>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 transition-all shadow-md shadow-amber-500/10"
+                  >
+                    <span>Proceed to DL Verification</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </form>
+            </div>
           )}
 
           {/* STEP 3: Automated Driving Licence Verification (MoRTH / Parivahan Sarathi API) */}
@@ -568,8 +797,8 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
                   <div>
                     <h4 className="font-bold text-rose-950">Verification Denied by MoRTH Sarathi Registry</h4>
                     <p className="mt-1 leading-relaxed text-rose-800">{verificationError}</p>
-                    <p className="text-[10px] text-rose-600 font-semibold mt-1.5">
-                      Tip: Try selecting the "Standard Valid DL (Delhi)" preset above for instantaneous approval.
+                    <p className="text-[10px] text-rose-600 font-medium mt-1">
+                      Please verify your licence number and date of birth match your physical driving licence document.
                     </p>
                   </div>
                 </div>

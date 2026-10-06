@@ -60,41 +60,36 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const charactersRef = useRef<HTMLDivElement>(null);
 
-  // High-performance, ultra-responsive mouse & cursor tracking
+  // High-performance, zero-latency mouse & cursor tracking
   useEffect(() => {
-    let animationFrameId: number;
-
     const handlePointerMove = (e: MouseEvent) => {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = requestAnimationFrame(() => {
-        if (!charactersRef.current) {
-          const centerX = window.innerWidth / 2;
-          const centerY = window.innerHeight / 2;
-          const normX = Math.max(-1, Math.min(1, (e.clientX - centerX) / (window.innerWidth * 0.4)));
-          const normY = Math.max(-1, Math.min(1, (e.clientY - centerY) / (window.innerHeight * 0.4)));
-          setMousePos({ x: normX, y: normY });
-          return;
-        }
-
-        const rect = charactersRef.current.getBoundingClientRect();
-        // Calculate center of character faces (slightly above center of SVG)
-        const faceCenterX = rect.left + rect.width * 0.5;
-        const faceCenterY = rect.top + rect.height * 0.48;
-
-        const deltaX = e.clientX - faceCenterX;
-        const deltaY = e.clientY - faceCenterY;
-        const dist = Math.hypot(deltaX, deltaY);
-
-        // Highly responsive distance curve for snappy real-time tracking
-        const maxRange = Math.max(220, Math.min(window.innerWidth, window.innerHeight) * 0.4);
-        const factor = Math.min(1, dist / maxRange);
-
-        const angle = Math.atan2(deltaY, deltaX);
-        const normX = Math.cos(angle) * Math.pow(factor, 0.65);
-        const normY = Math.sin(angle) * Math.pow(factor, 0.65);
-
+      if (!charactersRef.current) {
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const normX = Math.max(-1, Math.min(1, (e.clientX - centerX) / (window.innerWidth * 0.35)));
+        const normY = Math.max(-1, Math.min(1, (e.clientY - centerY) / (window.innerHeight * 0.35)));
         setMousePos({ x: normX, y: normY });
-      });
+        return;
+      }
+
+      const rect = charactersRef.current.getBoundingClientRect();
+      // Calculate center of character faces (slightly above center of SVG)
+      const faceCenterX = rect.left + rect.width * 0.5;
+      const faceCenterY = rect.top + rect.height * 0.48;
+
+      const deltaX = e.clientX - faceCenterX;
+      const deltaY = e.clientY - faceCenterY;
+      const dist = Math.hypot(deltaX, deltaY);
+
+      // Instantaneous angle calculation - eyes look directly at the mouse cursor
+      const angle = Math.atan2(deltaY, deltaX);
+      // Snappy responsiveness: reaches full eye travel rapidly without sluggish damping
+      const intensity = Math.min(1, Math.max(0.15, dist / 140));
+
+      const normX = Math.cos(angle) * intensity;
+      const normY = Math.sin(angle) * intensity;
+
+      setMousePos({ x: normX, y: normY });
     };
 
     window.addEventListener('mousemove', handlePointerMove, { passive: true });
@@ -103,18 +98,17 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
     return () => {
       window.removeEventListener('mousemove', handlePointerMove);
       window.removeEventListener('pointermove', handlePointerMove);
-      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
-  // Compute amplified, snappy pupil offsets (-13px to +13px) for rapid cursor following
-  let pupilX = mousePos.x * 12.5;
-  let pupilY = mousePos.y * 10.5;
+  // Compute amplified, snappy pupil offsets (-15px to +15px) for rapid cursor following
+  let pupilX = mousePos.x * 15;
+  let pupilY = mousePos.y * 12;
 
   if (focusedField === 'email') {
     // Look down towards the email input
-    pupilX = 5.5;
-    pupilY = 7.5;
+    pupilX = 6;
+    pupilY = 9;
   }
 
   const isPasswordCovered = focusedField === 'password' && !showLoginPassword && !showSignupPassword;
@@ -362,10 +356,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
               {/* 1. PURPLE TALL CHARACTER (Back Left) */}
               {/* ---------------------------------------------------- */}
               <g 
-                className="transition-transform duration-[60ms] ease-out will-change-transform" 
+                className={isPasswordCovered || isPeeking ? "transition-transform duration-300 ease-out will-change-transform" : "transition-none will-change-transform"} 
                 style={{ 
                   transformOrigin: '110px 360px',
-                  transform: `rotate(${pupilX * 0.22}deg)`
+                  transform: `rotate(${pupilX * 0.28}deg)`
                 }}
               >
                 {/* Purple Body */}
@@ -384,8 +378,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
                 ) : (
                   // Open Interactive Eyes (Fast & Responsive Tracking)
                   <g 
-                    className="transition-transform duration-[30ms] ease-out will-change-transform" 
-                    style={{ transform: `translate(${pupilX * 0.8}px, ${pupilY * 0.8}px)` }}
+                    className="transition-none will-change-transform" 
+                    style={{ transform: `translate(${pupilX * 0.85}px, ${pupilY * 0.85}px)` }}
                   >
                     {/* Left Eye */}
                     <circle cx="95" cy="140" r="5.5" fill="#111827" />
@@ -419,10 +413,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
               {/* 2. BLACK CHARACTER (Middle Center/Back) */}
               {/* ---------------------------------------------------- */}
               <g 
-                className="transition-transform duration-[60ms] ease-out will-change-transform" 
+                className={isPasswordCovered || isPeeking ? "transition-transform duration-300 ease-out will-change-transform" : "transition-none will-change-transform"} 
                 style={{ 
                   transformOrigin: '195px 360px',
-                  transform: `rotate(${pupilX * 0.26}deg)`
+                  transform: `rotate(${pupilX * 0.32}deg)`
                 }}
               >
                 {/* Black Body */}
@@ -441,8 +435,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
                 ) : (
                   // Big Expressive White Eyes Looking Around
                   <g 
-                    className="transition-transform duration-[30ms] ease-out will-change-transform" 
-                    style={{ transform: `translate(${pupilX * 0.95}px, ${pupilY * 0.95}px)` }}
+                    className="transition-none will-change-transform" 
+                    style={{ transform: `translate(${pupilX}px, ${pupilY}px)` }}
                   >
                     {/* Left Eye */}
                     <rect x="175" y="172" width="13" height="13" rx="3" fill="#ffffff" />
@@ -456,10 +450,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
               {/* 3. YELLOW TALL ROUNDED CHARACTER (Right) */}
               {/* ---------------------------------------------------- */}
               <g 
-                className="transition-transform duration-[60ms] ease-out will-change-transform" 
+                className={isPasswordCovered || isPeeking ? "transition-transform duration-300 ease-out will-change-transform" : "transition-none will-change-transform"} 
                 style={{ 
                   transformOrigin: '270px 360px',
-                  transform: `rotate(${pupilX * 0.32}deg)`
+                  transform: `rotate(${pupilX * 0.38}deg)`
                 }}
               >
                 {/* Yellow Body */}
@@ -473,8 +467,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
                   <path d="M 275 220 Q 285 228 295 220" stroke="#1f2937" strokeWidth="3" strokeLinecap="round" fill="none" />
                 ) : (
                   <g 
-                    className="transition-transform duration-[30ms] ease-out will-change-transform" 
-                    style={{ transform: `translate(${pupilX * 1.05}px, ${pupilY * 1.05}px)` }}
+                    className="transition-none will-change-transform" 
+                    style={{ transform: `translate(${pupilX * 1.1}px, ${pupilY * 1.1}px)` }}
                   >
                     {/* Big Eye on Yellow */}
                     <circle cx="282" cy="220" r="5.5" fill="#1f2937" />
@@ -488,10 +482,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
               {/* 4. ORANGE DOME CHARACTER (Front Center/Left) */}
               {/* ---------------------------------------------------- */}
               <g 
-                className="transition-transform duration-[60ms] ease-out will-change-transform" 
+                className={isPasswordCovered || isPeeking ? "transition-transform duration-300 ease-out will-change-transform" : "transition-none will-change-transform"} 
                 style={{ 
                   transformOrigin: '135px 360px',
-                  transform: `rotate(${pupilX * 0.18}deg)`
+                  transform: `rotate(${pupilX * 0.22}deg)`
                 }}
               >
                 {/* Orange Dome Body in Front */}
@@ -510,8 +504,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
                   </g>
                 ) : (
                   <g 
-                    className="transition-transform duration-[30ms] ease-out will-change-transform" 
-                    style={{ transform: `translate(${pupilX * 0.85}px, ${pupilY * 0.85}px)` }}
+                    className="transition-none will-change-transform" 
+                    style={{ transform: `translate(${pupilX * 0.9}px, ${pupilY * 0.9}px)` }}
                   >
                     {/* Left Eye */}
                     <circle cx="138" cy="298" r="4.5" fill="#111827" />
