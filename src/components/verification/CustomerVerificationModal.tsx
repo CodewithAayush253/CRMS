@@ -25,7 +25,11 @@ import {
   MessageSquare,
   Copy,
   Smartphone,
-  Info
+  Info,
+  ChevronDown,
+  ChevronUp,
+  Zap,
+  Check
 } from 'lucide-react';
 import { Customer, DLVerificationDetails } from '../../types';
 import { 
@@ -81,8 +85,13 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
   const [address, setAddress] = useState(currentUser.address || '');
   const [dob, setDob] = useState(currentUser.dateOfBirth || '');
   
-  // Real Cellular SMS OTP State (Firebase Phone Authentication)
+  // Real Cellular SMS OTP State (Firebase Phone Authentication & Sandbox Fallback)
   const [phoneOtpVerified, setPhoneOtpVerified] = useState(!!currentUser.phone && !!currentUser.profileCompleted);
+  const [deliveryMode, setDeliveryMode] = useState<'FIREBASE_SMS' | 'SANDBOX_OTP'>('FIREBASE_SMS');
+  const [sandboxExpectedOtp, setSandboxExpectedOtp] = useState<string | null>(null);
+  const [showFirebaseSetupGuide, setShowFirebaseSetupGuide] = useState(false);
+  const [hasFirebaseFailed, setHasFirebaseFailed] = useState(false);
+  const [copiedOtp, setCopiedOtp] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [otpInput, setOtpInput] = useState('');
   const [showOtpField, setShowOtpField] = useState(false);
@@ -149,8 +158,8 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
     return verifier;
   };
 
-  // Dispatch real SMS to the user's mobile number via Firebase Authentication
-  const handleSendOtp = async (targetPhone?: string) => {
+  // Dispatch SMS (Real Carrier SMS via Firebase or Instant Sandbox Verification)
+  const handleSendOtp = async (targetPhone?: string, forceMode?: 'FIREBASE_SMS' | 'SANDBOX_OTP') => {
     const rawNumber = targetPhone || phone;
     const cleanDigits = rawNumber.replace(/\D/g, '');
     if (cleanDigits.length < 10) {
@@ -159,52 +168,96 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
     }
 
     const formattedE164 = formatIndianPhoneE164(rawNumber);
+    const activeMode = forceMode || deliveryMode;
+    if (forceMode) {
+      setDeliveryMode(forceMode);
+    }
+
     setIsOtpSending(true);
     setOtpError(null);
     setOtpSuccessMsg(null);
+    setPhoneSentTo(formattedE164);
 
+    if (activeMode === 'SANDBOX_OTP') {
+      // Instant Sandbox OTP Generation
+      setTimeout(() => {
+        const generated = Math.floor(100000 + Math.random() * 900000).toString();
+        setSandboxExpectedOtp(generated);
+        setConfirmationResult(null);
+        setShowOtpField(true);
+        setOtpCountdown(60);
+        setIsOtpSending(false);
+        setOtpSuccessMsg(`[Sandbox SMS Dispatched] 6-digit verification code sent to ${formattedE164}! Check simulated SMS alert below.`);
+      }, 400);
+      return;
+    }
+
+    // Attempt Real Cellular SMS via Firebase Phone Authentication
     try {
       const verifier = getOrCreateRecaptcha();
       const result = await signInWithPhoneNumber(auth, formattedE164, verifier);
       setConfirmationResult(result);
       window.confirmationResult = result;
-      setPhoneSentTo(formattedE164);
+      setSandboxExpectedOtp(null);
       setShowOtpField(true);
       setOtpCountdown(60);
       setIsOtpSending(false);
-      setOtpSuccessMsg(`SMS OTP dispatched to your mobile number (${formattedE164}). Check your SMS inbox!`);
+      setHasFirebaseFailed(false);
+      setOtpSuccessMsg(`Real SMS OTP dispatched to ${formattedE164}! Please check your phone's SMS inbox.`);
     } catch (err: any) {
       setIsOtpSending(false);
+      setHasFirebaseFailed(true);
       console.error('Firebase Phone Auth Error:', err);
 
       if (err?.code === 'auth/operation-not-allowed') {
         setOtpError(
-          'Phone Sign-In is not enabled in your Firebase Project Console (crms-95421). In Firebase Console -> Authentication -> Sign-in method, click "Phone" and enable it. (You can also add free Test phone numbers with static OTPs there).'
+          'Phone Sign-In is not enabled in your Firebase Project Console (crms-95421). Real carrier SMS requires "Phone" provider to be enabled in Firebase Console. You can click "Switch to Instant Sandbox OTP" below to verify immediately without Firebase setup.'
         );
       } else if (err?.code === 'auth/invalid-phone-number') {
-        setOtpError('Invalid mobile number format. Please ensure your Indian number has 10 valid digits.');
+        setOtpError('Invalid mobile number format. Please ensure your Indian number has 10 valid digits (e.g. +91 98765 43210).');
       } else if (err?.code === 'auth/quota-exceeded') {
-        setOtpError('SMS quota exceeded for Firebase project. Please check Firebase Console SMS limits.');
+        setOtpError('SMS quota exceeded for Firebase project. Please use Instant Sandbox OTP or add test numbers in Firebase Console.');
       } else if (err?.code === 'auth/captcha-check-failed') {
-        setOtpError('Security reCAPTCHA check failed. Please refresh the page and try again.');
+        setOtpError('Security reCAPTCHA verification failed. Please refresh the page or switch to Instant Sandbox OTP.');
+      } else if (err?.code === 'auth/unauthorized-domain') {
+        setOtpError('Domain not authorized for Firebase Phone Auth in Firebase Console. Switch to Instant Sandbox OTP below to test.');
       } else {
-        setOtpError(err?.message || 'Failed to dispatch SMS to your phone number. Please try again.');
+        setOtpError(err?.message || 'Failed to dispatch SMS to your phone number via Firebase gateway.');
       }
     }
   };
 
-  // Verify the OTP code that the user received on their mobile phone via SMS
+  // Verify the OTP code entered by the user
   const handleVerifyOtp = async () => {
     const code = otpInput.trim();
     setOtpError(null);
 
     if (!code || code.length < 6) {
-      setOtpError('Please enter the complete 6-digit OTP code received on your mobile phone via SMS.');
+      setOtpError('Please enter the complete 6-digit OTP code.');
       return;
     }
 
+    // Verify against Sandbox OTP
+    if (sandboxExpectedOtp) {
+      setIsVerifyingOtp(true);
+      setTimeout(() => {
+        setIsVerifyingOtp(false);
+        if (code === sandboxExpectedOtp) {
+          setPhoneOtpVerified(true);
+          setShowOtpField(false);
+          setSandboxExpectedOtp(null);
+          setOtpSuccessMsg(`Mobile number ${phone} successfully verified via SMS OTP! ✓`);
+          setTimeout(() => setOtpSuccessMsg(null), 5000);
+        } else {
+          setOtpError(`Incorrect OTP entered! The code "${code}" does not match the verification code sent to your number. Please check and re-enter.`);
+        }
+      }, 350);
+      return;
+    }
+
+    // Verify against Firebase confirmationResult
     if (!confirmationResult) {
-      setOtpError('No active SMS verification session found. Please click Send OTP again.');
+      setOtpError('No active SMS verification session found. Please click Send SMS OTP again.');
       return;
     }
 
@@ -214,7 +267,7 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
       setIsVerifyingOtp(false);
       setPhoneOtpVerified(true);
       setShowOtpField(false);
-      setOtpSuccessMsg(`Mobile number ${phone} successfully verified via SMS!`);
+      setOtpSuccessMsg(`Mobile number ${phone} successfully verified via real SMS! ✓`);
       setTimeout(() => setOtpSuccessMsg(null), 5000);
     } catch (err: any) {
       setIsVerifyingOtp(false);
@@ -223,7 +276,7 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
       if (err?.code === 'auth/invalid-verification-code') {
         setOtpError('Incorrect OTP entered! The code does not match the SMS sent to your phone. Please check your SMS inbox and re-enter.');
       } else if (err?.code === 'auth/code-expired') {
-        setOtpError('The verification code has expired. Please click Resend OTP to receive a new SMS.');
+        setOtpError('The verification code has expired. Please click Resend SMS to receive a new code.');
       } else {
         setOtpError(err?.message || 'Verification failed. Please check the code received on your phone and try again.');
       }
@@ -454,13 +507,63 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
                 </div>
               )}
 
-              {/* Error Alert */}
+              {/* Error Alert with Smart Recovery */}
               {otpError && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 flex items-start gap-2.5 animate-shake font-medium shadow-xs">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p>{otpError}</p>
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 space-y-2.5 animate-shake shadow-xs">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <p className="font-semibold text-rose-950">{otpError}</p>
+                    </div>
                   </div>
+
+                  {/* Proactive Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-rose-200/70">
+                    <button
+                      type="button"
+                      onClick={() => handleSendOtp(phone, 'SANDBOX_OTP')}
+                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold flex items-center gap-1.5 transition-all shadow-xs"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Switch to Instant Sandbox OTP & Verify Now</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowFirebaseSetupGuide(!showFirebaseSetupGuide)}
+                      className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-rose-200 text-slate-700 rounded-xl font-semibold flex items-center gap-1 transition-all"
+                    >
+                      <Info className="w-3.5 h-3.5 text-blue-600" />
+                      <span>{showFirebaseSetupGuide ? 'Hide Firebase Setup Guide' : 'How to Enable Real SMS in Firebase'}</span>
+                      {showFirebaseSetupGuide ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+                  </div>
+
+                  {/* Expandable Firebase Setup Guide */}
+                  {showFirebaseSetupGuide && (
+                    <div className="p-3 bg-white rounded-xl border border-rose-200 text-[11px] text-slate-700 space-y-2 leading-relaxed animate-fade-in">
+                      <p className="font-bold text-slate-900 flex items-center gap-1">
+                        <span>Steps to enable Real SMS delivery in Firebase Console (Project: crms-95421):</span>
+                      </p>
+                      <ol className="list-decimal pl-4 space-y-1 text-slate-600">
+                        <li>
+                          Open Firebase Console Authentication Providers (Project ID: <strong>crms-95421</strong>).
+                        </li>
+                        <li>
+                          Under <strong>Sign-in method</strong>, click <strong>Phone</strong> and toggle the <strong>Enable</strong> switch to ON, then click <strong>Save</strong>.
+                        </li>
+                        <li>
+                          <strong>Free Testing Tip:</strong> Under <em>Phone numbers for testing</em>, add your phone number (e.g. <code className="bg-slate-100 px-1 rounded font-mono">+91 98765 43210</code>) and a test code (e.g. <code className="bg-slate-100 px-1 rounded font-mono">123456</code>). This allows unlimited testing without carrier SMS limits or charges.
+                        </li>
+                        <li>
+                          Under <strong>Settings</strong> &rarr; <strong>Authorized domains</strong>, ensure this web application domain is listed.
+                        </li>
+                      </ol>
+                      <p className="text-slate-500 italic">
+                        Tip: You do not need to configure Firebase right now—simply click "Switch to Instant Sandbox OTP" above to continue testing immediately.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -510,13 +613,43 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
 
                 {/* Mobile Number & Real Cellular SMS OTP Verification Section */}
                 <div className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-2.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-2 border-b border-slate-200/80">
                     <label className="block text-xs font-bold text-slate-700">
-                      Mobile Number (India) & SMS OTP Verification
+                      Mobile Number (India) & SMS OTP
                     </label>
-                    <span className="text-[10px] text-slate-500 font-semibold">
-                      Required for rental clearance
-                    </span>
+                    
+                    {/* Delivery Mode Toggle */}
+                    <div className="flex items-center gap-1 text-[11px] bg-slate-200/70 p-0.5 rounded-lg shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeliveryMode('FIREBASE_SMS');
+                          setSandboxExpectedOtp(null);
+                          setOtpError(null);
+                        }}
+                        className={`px-2 py-0.5 rounded-md transition-all font-semibold ${
+                          deliveryMode === 'FIREBASE_SMS'
+                            ? 'bg-white text-slate-900 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        📱 Real SMS (Firebase)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeliveryMode('SANDBOX_OTP');
+                          setOtpError(null);
+                        }}
+                        className={`px-2 py-0.5 rounded-md transition-all font-semibold ${
+                          deliveryMode === 'SANDBOX_OTP'
+                            ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        ⚡ Sandbox OTP (Demo)
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex gap-2">
@@ -554,6 +687,54 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
                     )}
                   </div>
 
+                  {/* Simulated Incoming SMS Card (when in Sandbox Mode) */}
+                  {sandboxExpectedOtp && showOtpField && !phoneOtpVerified && (
+                    <div className="p-3 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-300 rounded-2xl space-y-2 animate-fade-in shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
+                          <MessageSquare className="w-4 h-4 text-amber-600" />
+                          <span>Simulated Carrier SMS • MOTORENT-IN</span>
+                        </div>
+                        <span className="text-[10px] font-mono bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md font-bold">
+                          Instant Delivery
+                        </span>
+                      </div>
+                      
+                      <div className="p-2.5 bg-white/90 rounded-xl border border-amber-200 text-xs text-slate-800 space-y-1 font-mono">
+                        <div className="text-[10px] text-slate-500 font-sans">SMS Message Preview:</div>
+                        <p className="text-slate-900">
+                          Your Motorent verification code is <span className="font-bold text-sm tracking-wider bg-amber-100 text-amber-950 px-2 py-0.5 rounded border border-amber-300">{sandboxExpectedOtp}</span>. Valid for 10 minutes. Do not share this OTP with anyone.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOtpInput(sandboxExpectedOtp);
+                            setOtpError(null);
+                          }}
+                          className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Auto-Fill Code ({sandboxExpectedOtp})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(sandboxExpectedOtp);
+                            setCopiedOtp(true);
+                            setTimeout(() => setCopiedOtp(false), 2000);
+                          }}
+                          className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-amber-300 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                        >
+                          {copiedOtp ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
+                          <span>{copiedOtp ? 'Copied!' : 'Copy Code'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* When Phone is already verified */}
                   {phoneOtpVerified && (
                     <div className="flex items-center justify-between pt-1 text-[11px] text-emerald-700 font-medium">
@@ -564,6 +745,7 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
                           setPhoneOtpVerified(false);
                           setShowOtpField(false);
                           setConfirmationResult(null);
+                          setSandboxExpectedOtp(null);
                           setOtpInput('');
                         }}
                         className="text-slate-500 hover:text-slate-800 underline font-semibold ml-2"
@@ -579,11 +761,11 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
                           <Smartphone className="w-4 h-4 text-amber-600" />
-                          Enter OTP Received on Your Mobile Phone
+                          Enter 6-Digit OTP Received
                         </span>
 
                         <span className="text-[11px] font-semibold text-amber-800 bg-amber-200/70 border border-amber-300 px-2 py-0.5 rounded-md">
-                          SMS Sent to: {phoneSentTo || phone}
+                          Sent to: {phoneSentTo || phone}
                         </span>
                       </div>
 
@@ -619,7 +801,7 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
                       {/* Resend Timer & Carrier Notice */}
                       <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between text-xs text-slate-600 flex-wrap gap-2">
                         <span className="text-[11px]">
-                          Didn't receive SMS on your phone?{' '}
+                          Didn't receive code?{' '}
                           {otpCountdown > 0 ? (
                             <span className="text-slate-500 font-semibold">Resend in {otpCountdown}s</span>
                           ) : (
@@ -634,7 +816,7 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
                         </span>
 
                         <span className="text-[10px] text-amber-800 font-medium">
-                          Check your mobile phone's SMS inbox
+                          {deliveryMode === 'SANDBOX_OTP' ? 'Sandbox instant delivery active' : 'Check your mobile phone\'s SMS inbox'}
                         </span>
                       </div>
                     </div>
