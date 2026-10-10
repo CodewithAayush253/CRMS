@@ -85,9 +85,9 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
   const [address, setAddress] = useState(currentUser.address || '');
   const [dob, setDob] = useState(currentUser.dateOfBirth || '');
   
-  // Real Cellular SMS OTP State (Firebase Phone Authentication & Sandbox Fallback)
+  // Real Cellular SMS OTP State (Instant SMS Simulation & Firebase Fallback)
   const [phoneOtpVerified, setPhoneOtpVerified] = useState(!!currentUser.phone && !!currentUser.profileCompleted);
-  const [deliveryMode, setDeliveryMode] = useState<'FIREBASE_SMS' | 'SANDBOX_OTP'>('FIREBASE_SMS');
+  const [deliveryMode, setDeliveryMode] = useState<'FIREBASE_SMS' | 'SANDBOX_OTP'>('SANDBOX_OTP');
   const [sandboxExpectedOtp, setSandboxExpectedOtp] = useState<string | null>(null);
   const [showFirebaseSetupGuide, setShowFirebaseSetupGuide] = useState(false);
   const [hasFirebaseFailed, setHasFirebaseFailed] = useState(false);
@@ -210,17 +210,19 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
       console.error('Firebase Phone Auth Error:', err);
 
       if (err?.code === 'auth/operation-not-allowed') {
+        const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'your domain';
         setOtpError(
-          'Phone Sign-In is not enabled in your Firebase Project Console (crms-95421). Real carrier SMS requires "Phone" provider to be enabled in Firebase Console. You can click "Switch to Instant Sandbox OTP" below to verify immediately without Firebase setup.'
+          `Firebase Phone Auth failed (${err?.code}). Even with Phone enabled, Firebase requires: 1) Add "${currentDomain}" in Firebase Console -> Authentication -> Settings -> Authorized domains. 2) Allow India (+91) in Settings -> SMS region policy. Or add your number under "Phone numbers for testing" with a static code.`
         );
       } else if (err?.code === 'auth/invalid-phone-number') {
         setOtpError('Invalid mobile number format. Please ensure your Indian number has 10 valid digits (e.g. +91 98765 43210).');
       } else if (err?.code === 'auth/quota-exceeded') {
-        setOtpError('SMS quota exceeded for Firebase project. Please use Instant Sandbox OTP or add test numbers in Firebase Console.');
+        setOtpError('SMS daily quota exceeded for Firebase Spark tier. Add your number under "Phone numbers for testing" in Firebase Console, or switch to Instant Sandbox OTP.');
       } else if (err?.code === 'auth/captcha-check-failed') {
         setOtpError('Security reCAPTCHA verification failed. Please refresh the page or switch to Instant Sandbox OTP.');
       } else if (err?.code === 'auth/unauthorized-domain') {
-        setOtpError('Domain not authorized for Firebase Phone Auth in Firebase Console. Switch to Instant Sandbox OTP below to test.');
+        const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'your domain';
+        setOtpError(`Domain "${currentDomain}" is not in Firebase Authorized domains. Go to Firebase Console -> Authentication -> Settings -> Authorized domains and add "${currentDomain}".`);
       } else {
         setOtpError(err?.message || 'Failed to dispatch SMS to your phone number via Firebase gateway.');
       }
@@ -543,24 +545,21 @@ export const CustomerVerificationModal: React.FC<CustomerVerificationModalProps>
                   {showFirebaseSetupGuide && (
                     <div className="p-3 bg-white rounded-xl border border-rose-200 text-[11px] text-slate-700 space-y-2 leading-relaxed animate-fade-in">
                       <p className="font-bold text-slate-900 flex items-center gap-1">
-                        <span>Steps to enable Real SMS delivery in Firebase Console (Project: crms-95421):</span>
+                        <span>Why this happens & 3 quick steps to fix in Firebase Console (crms-95421):</span>
                       </p>
-                      <ol className="list-decimal pl-4 space-y-1 text-slate-600">
+                      <ol className="list-decimal pl-4 space-y-1.5 text-slate-600">
                         <li>
-                          Open Firebase Console Authentication Providers (Project ID: <strong>crms-95421</strong>).
+                          <strong>Authorized Domains:</strong> In Firebase Console &rarr; <strong>Authentication</strong> &rarr; <strong>Settings</strong> tab &rarr; scroll to <strong>Authorized domains</strong>. Click <strong>Add domain</strong> and add <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-semibold text-slate-800">velocityarms.vercel.app</code> (plus any other domain you access the app on).
                         </li>
                         <li>
-                          Under <strong>Sign-in method</strong>, click <strong>Phone</strong> and toggle the <strong>Enable</strong> switch to ON, then click <strong>Save</strong>.
+                          <strong>SMS Region Policy:</strong> In Firebase Console &rarr; <strong>Authentication</strong> &rarr; <strong>Settings</strong> tab &rarr; <strong>SMS region policy</strong>. Make sure India (+91) is allowed (new Firebase projects block international SMS regions by default).
                         </li>
                         <li>
-                          <strong>Free Testing Tip:</strong> Under <em>Phone numbers for testing</em>, add your phone number (e.g. <code className="bg-slate-100 px-1 rounded font-mono">+91 98765 43210</code>) and a test code (e.g. <code className="bg-slate-100 px-1 rounded font-mono">123456</code>). This allows unlimited testing without carrier SMS limits or charges.
-                        </li>
-                        <li>
-                          Under <strong>Settings</strong> &rarr; <strong>Authorized domains</strong>, ensure this web application domain is listed.
+                          <strong>Best for Testing (Free & Instant):</strong> In <strong>Sign-in method</strong> &rarr; click <strong>Phone</strong> &rarr; expand <strong>Phone numbers for testing</strong>. Add your number <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-semibold text-slate-800">+91 8279775014</code> with test code <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-semibold text-slate-800">123456</code>. This bypasses carrier quotas and works 100% reliably.
                         </li>
                       </ol>
-                      <p className="text-slate-500 italic">
-                        Tip: You do not need to configure Firebase right now—simply click "Switch to Instant Sandbox OTP" above to continue testing immediately.
+                      <p className="text-slate-500 italic pt-1 border-t border-slate-100">
+                        ⚡ Quick bypass: You can also simply click <strong>"Switch to Instant Sandbox OTP & Verify Now"</strong> above to verify your profile instantly right here!
                       </p>
                     </div>
                   )}

@@ -81,10 +81,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
       const deltaY = e.clientY - faceCenterY;
       const dist = Math.hypot(deltaX, deltaY);
 
-      // Instantaneous angle calculation - eyes look directly at the mouse cursor
+      // Gentle angle calculation - eyes look slowly towards the mouse cursor
       const angle = Math.atan2(deltaY, deltaX);
-      // Snappy responsiveness: reaches full eye travel rapidly without sluggish damping
-      const intensity = Math.min(1, Math.max(0.15, dist / 140));
+      const intensity = Math.min(1, dist / 250);
 
       const normX = Math.cos(angle) * intensity;
       const normY = Math.sin(angle) * intensity;
@@ -101,9 +100,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
     };
   }, []);
 
-  // Compute amplified, snappy pupil offsets (-15px to +15px) for rapid cursor following
-  let pupilX = mousePos.x * 15;
-  let pupilY = mousePos.y * 12;
+  // Compute gentle pupil offsets (-12px to +12px) for slow cursor following
+  let pupilX = mousePos.x * 12;
+  let pupilY = mousePos.y * 10;
 
   if (focusedField === 'email') {
     // Look down towards the email input
