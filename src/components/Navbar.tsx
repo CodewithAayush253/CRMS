@@ -223,10 +223,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     type="button"
                     onClick={onOpenVerificationModal}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[11px] font-bold hover:bg-amber-500/30 transition-colors animate-pulse"
-                    title="Complete Driving Licence Verification to rent vehicles"
+                    title="Complete KYC Profile & Driving Licence Verification to rent vehicles"
                   >
                     <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Verify Driving Licence</span>
+                    <span>Verify Profile & DL</span>
                   </button>
                 )}
 
