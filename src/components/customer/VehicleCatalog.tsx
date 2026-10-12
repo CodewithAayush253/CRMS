@@ -189,16 +189,14 @@ export const VehicleCatalog: React.FC<VehicleCatalogProps> = ({
               </p>
             </div>
           </div>
-          {onOpenVerificationModal && (
             <button
               type="button"
               onClick={onOpenVerificationModal}
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1.5 shadow-xs"
             >
               <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Verify Profile & DL Now</span>
+              <span>Verify Driving Licence Now</span>
             </button>
-          )}
         </div>
       )}
 

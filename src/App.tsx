@@ -860,17 +860,19 @@ export default function App() {
 
       {/* POPUP MODALS */}
       {/* 1. Car Details Modal */}
-      <CarDetailsModal
-        vehicle={selectedVehicleForDetails}
-        reviews={reviews}
-        onClose={() => setSelectedVehicleForDetails(null)}
-        onBookNow={(veh) => {
-          setSelectedVehicleForDetails(null);
-          handleBookVehicle(veh);
-        }}
-        pickupDate={pickupDate}
-        returnDate={returnDate}
-      />
+      {selectedVehicleForDetails && (
+        <CarDetailsModal
+          vehicle={selectedVehicleForDetails}
+          reviews={reviews}
+          onClose={() => setSelectedVehicleForDetails(null)}
+          onBookNow={(veh) => {
+            setSelectedVehicleForDetails(null);
+            handleBookVehicle(veh);
+          }}
+          pickupDate={pickupDate}
+          returnDate={returnDate}
+        />
+      )}
 
       {/* 2. Step-by-Step Booking & Payment Wizard (Guarded by Customer Account) */}
       {selectedVehicleForBooking && currentUser && (
@@ -891,10 +893,12 @@ export default function App() {
       )}
 
       {/* 3. Printable Tax Invoice & Receipt Modal */}
-      <InvoiceModal
-        booking={viewingInvoice}
-        onClose={() => setViewingInvoice(null)}
-      />
+      {viewingInvoice && (
+        <InvoiceModal
+          booking={viewingInvoice}
+          onClose={() => setViewingInvoice(null)}
+        />
+      )}
 
       {/* 4. Customer Review & Rating Modal */}
       {reviewingBooking && (
@@ -907,27 +911,31 @@ export default function App() {
       )}
 
       {/* 5. Java Spring Boot Architecture & Code Explorer */}
-      <JavaArchitectureExplorer
-        isOpen={isJavaModalOpen}
-        onClose={() => setIsJavaModalOpen(false)}
-      />
+      {isJavaModalOpen && (
+        <JavaArchitectureExplorer
+          isOpen={isJavaModalOpen}
+          onClose={() => setIsJavaModalOpen(false)}
+        />
+      )}
 
       {/* 6. Role-Based Unified Authentication & Registration Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        initialMode={authModalMode}
-        taskAttempted={authTaskAttempted}
-        onClose={() => {
-          setIsAuthModalOpen(false);
-          setAuthTaskAttempted(null);
-        }}
-        onLoginSuccess={handleLoginSuccess}
-        existingCustomers={customers}
-        onCustomerCreated={handleCustomerCreated}
-      />
+      {isAuthModalOpen && (
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          initialMode={authModalMode}
+          taskAttempted={authTaskAttempted}
+          onClose={() => {
+            setIsAuthModalOpen(false);
+            setAuthTaskAttempted(null);
+          }}
+          onLoginSuccess={handleLoginSuccess}
+          existingCustomers={customers}
+          onCustomerCreated={handleCustomerCreated}
+        />
+      )}
 
       {/* 7. Government-Authorized Customer Profile & DL Verification Modal */}
-      {currentUser && (
+      {isVerificationModalOpen && currentUser && (
         <CustomerVerificationModal
           isOpen={isVerificationModalOpen}
           currentUser={currentUser}
@@ -941,7 +949,7 @@ export default function App() {
       )}
 
       {/* 8. Velocity Rewards Loyalty Program Modal */}
-      {currentUser && (
+      {isLoyaltyModalOpen && currentUser && (
         <LoyaltyProgramModal
           isOpen={isLoyaltyModalOpen}
           currentUser={currentUser}

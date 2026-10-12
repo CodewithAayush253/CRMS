@@ -31,7 +31,7 @@ import { getLoyaltyTier } from '../../services/loyaltyService';
 import { formatINR } from '../../utils/currency';
 
 interface BookingModalProps {
-  vehicle: Vehicle | null;
+  vehicle: Vehicle;
   currentUser: Customer;
   initialPickupDate: string;
   initialReturnDate: string;
@@ -53,8 +53,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   onBookingSuccess,
   onOpenInvoice,
 }) => {
-  if (!vehicle) return null;
-
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [pickupDate, setPickupDate] = useState(initialPickupDate);
   const [returnDate, setReturnDate] = useState(initialReturnDate);

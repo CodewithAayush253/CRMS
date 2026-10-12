@@ -1,16 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   Eye, 
   EyeOff, 
   CheckCircle2, 
   AlertCircle,
-  ShieldCheck,
-  User,
-  Mail,
-  Lock,
-  Phone,
-  CreditCard,
+  ShieldCheck, 
+  User, 
+  Mail, 
+  Lock, 
+  Phone, 
   Car,
+  KeyRound,
+  FileCheck,
+  MapPin,
+  Clock,
   Sparkles
 } from 'lucide-react';
 import { Customer } from '../../types';
@@ -54,65 +57,6 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Interactive Character Animation States
-  const [focusedField, setFocusedField] = useState<'email' | 'password' | 'other' | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
-  const charactersRef = useRef<HTMLDivElement>(null);
-
-  // High-performance, zero-latency mouse & cursor tracking
-  useEffect(() => {
-    const handlePointerMove = (e: MouseEvent) => {
-      if (!charactersRef.current) {
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        const normX = Math.max(-1, Math.min(1, (e.clientX - centerX) / (window.innerWidth * 0.35)));
-        const normY = Math.max(-1, Math.min(1, (e.clientY - centerY) / (window.innerHeight * 0.35)));
-        setMousePos({ x: normX, y: normY });
-        return;
-      }
-
-      const rect = charactersRef.current.getBoundingClientRect();
-      // Calculate center of character faces (slightly above center of SVG)
-      const faceCenterX = rect.left + rect.width * 0.5;
-      const faceCenterY = rect.top + rect.height * 0.48;
-
-      const deltaX = e.clientX - faceCenterX;
-      const deltaY = e.clientY - faceCenterY;
-      const dist = Math.hypot(deltaX, deltaY);
-
-      // Gentle angle calculation - eyes look slowly towards the mouse cursor
-      const angle = Math.atan2(deltaY, deltaX);
-      const intensity = Math.min(1, dist / 250);
-
-      const normX = Math.cos(angle) * intensity;
-      const normY = Math.sin(angle) * intensity;
-
-      setMousePos({ x: normX, y: normY });
-    };
-
-    window.addEventListener('mousemove', handlePointerMove, { passive: true });
-    window.addEventListener('pointermove', handlePointerMove, { passive: true });
-
-    return () => {
-      window.removeEventListener('mousemove', handlePointerMove);
-      window.removeEventListener('pointermove', handlePointerMove);
-    };
-  }, []);
-
-  // Compute gentle pupil offsets (-12px to +12px) for slow cursor following
-  let pupilX = mousePos.x * 12;
-  let pupilY = mousePos.y * 10;
-
-  if (focusedField === 'email') {
-    // Look down towards the email input
-    pupilX = 6;
-    pupilY = 9;
-  }
-
-  const isPasswordCovered = focusedField === 'password' && !showLoginPassword && !showSignupPassword;
-  const isPeeking = focusedField === 'password' && (showLoginPassword || showSignupPassword);
-
   // Helper for admin user
   const getAdminUser = (): Customer => {
     const found = existingCustomers.find(c => c.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
@@ -137,6 +81,25 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
       password: ADMIN_PASS,
     };
+  };
+
+  // Quick fill admin credentials for testing
+  const handleFillAdminCredentials = () => {
+    setActiveTab('SIGNIN');
+    setLoginEmail(ADMIN_EMAIL);
+    setLoginPassword(ADMIN_PASS);
+    setErrorMessage(null);
+  };
+
+  // Quick fill customer demo credentials
+  const handleFillCustomerDemo = () => {
+    const demoCust = existingCustomers.find(c => c.role === 'ROLE_CUSTOMER');
+    if (demoCust) {
+      setActiveTab('SIGNIN');
+      setLoginEmail(demoCust.email);
+      setLoginPassword(demoCust.password || 'password123');
+      setErrorMessage(null);
+    }
   };
 
   // Handle Login
@@ -304,266 +267,169 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
   };
 
   return (
-    <div 
-      ref={containerRef}
-      className="min-h-screen bg-slate-900 text-slate-800 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-[#6c28ff] selection:text-white relative overflow-hidden"
-    >
-      {/* Ambient background glowing orbs */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-ambient-glow pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl animate-ambient-glow pointer-events-none" style={{ animationDelay: '3s' }} />
-
-      {/* Refined Brand Header */}
-      <div className="w-full max-w-4xl mb-6 px-1 flex items-center justify-between relative z-10">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-blue-600 selection:text-white relative">
+      
+      {/* Brand Header */}
+      <div className="w-full max-w-5xl mb-6 px-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-500 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20">
-            <Car className="w-5 h-5 text-slate-950" />
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-md">
+            <Car className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-white leading-tight">
-              Velocity<span className="text-amber-400">CRMS</span>
+            <h1 className="text-xl font-bold tracking-tight text-white leading-tight">
+              Velocity<span className="text-blue-400">CRMS</span>
             </h1>
             <p className="text-xs text-slate-400 font-medium">
-              Car Rental & Fleet Operations
+              Enterprise Car Rental & Fleet Operations
             </p>
           </div>
         </div>
 
-        <div className="text-xs text-slate-300 font-medium bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-700/80 backdrop-blur-sm hidden sm:block">
-          Enterprise Access Portal
+        <div className="text-xs text-slate-400 font-medium bg-slate-900 px-3.5 py-1.5 rounded-full border border-slate-800 hidden sm:flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Fleet Network Online</span>
         </div>
       </div>
 
-      {/* Main Login / Sign-up Card with Glassmorphic Effect & Interactive Border */}
-      <div className="w-full max-w-4xl bg-white/90 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/80 overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[560px] relative z-10 animate-in fade-in zoom-in-95 duration-300 hover:shadow-[0_30px_70px_-15px_rgba(108,40,255,0.18)] transition-all">
+      {/* Main Authentication Card */}
+      <div className="w-full max-w-5xl bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
         
         {/* ======================================================== */}
-        {/* LEFT COLUMN: ANIMATED CHARACTERS */}
+        {/* LEFT COLUMN: ENTERPRISE FLEET SHOWCASE */}
         {/* ======================================================== */}
-        <div className="md:col-span-6 bg-slate-50/70 p-6 sm:p-10 flex flex-col items-center justify-center relative select-none border-b md:border-b-0 md:border-r border-slate-100 overflow-hidden">
-          
-          {/* SVG Canvas for the 4 animated characters */}
-          <div ref={charactersRef} className="w-full max-w-[340px] sm:max-w-[380px] aspect-square relative flex items-center justify-center animate-character-breathe">
-            
-            <svg 
-              viewBox="0 0 400 400" 
-              className="w-full h-full drop-shadow-xs overflow-visible"
-            >
-              {/* Ground Shadow */}
-              <ellipse cx="200" cy="365" rx="170" ry="12" fill="#e2e8f0" opacity="0.6" />
+        <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950/40 p-8 sm:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800 relative">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold mb-6">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Certified Commercial Mobility</span>
+            </div>
 
-              {/* ---------------------------------------------------- */}
-              {/* 1. PURPLE TALL CHARACTER (Back Left) */}
-              {/* ---------------------------------------------------- */}
-              <g 
-                className={isPasswordCovered || isPeeking ? "transition-transform duration-300 ease-out will-change-transform" : "transition-none will-change-transform"} 
-                style={{ 
-                  transformOrigin: '110px 360px',
-                  transform: `rotate(${pupilX * 0.28}deg)`
-                }}
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Premium Self-Drive Fleet Management
+            </h2>
+            <p className="text-sm text-slate-400 mt-3 leading-relaxed">
+              Book verified sedans, luxury SUVs, and commercial vehicles with instant digital driver license check and live GPS radar telematics.
+            </p>
+
+            {/* Feature Points */}
+            <div className="mt-8 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0 mt-0.5">
+                  <FileCheck className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-white">Instant KYC & License Verification</h4>
+                  <p className="text-[11px] text-slate-400">Government driver license OCR matching with zero paper delays.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0 mt-0.5">
+                  <MapPin className="w-4 h-4 text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-white">Airport & City Hub Pickups</h4>
+                  <p className="text-[11px] text-slate-400">Available at Terminal 3 IGI Airport, Aerocity, and major metro hubs.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0 mt-0.5">
+                  <ShieldCheck className="w-4 h-4 text-purple-400" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-white">Telematics & Anti-Theft Radar</h4>
+                  <p className="text-[11px] text-slate-400">24/7 geo-fencing, speed governance, and remote secure immobilization.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Demo Access Badges */}
+          <div className="mt-8 pt-6 border-t border-slate-800/80">
+            <p className="text-[11px] text-slate-400 font-medium mb-2.5">
+              Testing or Evaluation? Use quick credentials:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleFillAdminCredentials}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-amber-300 transition-colors flex items-center gap-1.5"
               >
-                {/* Purple Body */}
-                <path
-                  d="M 60 360 L 60 120 C 60 90, 160 90, 160 120 L 160 360 Z"
-                  fill="#5d28e0"
-                />
-
-                {/* Purple Character Face */}
-                {isPasswordCovered ? (
-                  // Closed / Shy Eyes
-                  <g className="transition-all duration-300">
-                    <path d="M 85 145 Q 95 152 105 145" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-                    <path d="M 120 145 Q 130 152 140 145" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-                  </g>
-                ) : (
-                  // Open Interactive Eyes (Fast & Responsive Tracking)
-                  <g 
-                    className="transition-none will-change-transform" 
-                    style={{ transform: `translate(${pupilX * 0.85}px, ${pupilY * 0.85}px)` }}
-                  >
-                    {/* Left Eye */}
-                    <circle cx="95" cy="140" r="5.5" fill="#111827" />
-                    {/* Right Eye */}
-                    <circle cx="130" cy="140" r="5.5" fill="#111827" />
-                    {/* Cute Nose Dot / Snout */}
-                    <rect x="110" y="146" width="6" height="12" rx="3" fill="#111827" />
-                  </g>
-                )}
-
-                {/* Purple Character Hands (Move up to cover eyes when password is focused) */}
-                <g 
-                  className="transition-all duration-300 ease-out"
-                  style={{
-                    transform: isPasswordCovered 
-                      ? 'translateY(-140px)' 
-                      : isPeeking 
-                      ? 'translateY(-100px)' 
-                      : 'translateY(0px)',
-                    opacity: isPasswordCovered || isPeeking ? 1 : 0
-                  }}
-                >
-                  {/* Left Hand */}
-                  <ellipse cx="95" cy="280" rx="18" ry="14" fill="#4d1ec5" />
-                  {/* Right Hand */}
-                  <ellipse cx="130" cy="280" rx="18" ry="14" fill="#4d1ec5" />
-                </g>
-              </g>
-
-              {/* ---------------------------------------------------- */}
-              {/* 2. BLACK CHARACTER (Middle Center/Back) */}
-              {/* ---------------------------------------------------- */}
-              <g 
-                className={isPasswordCovered || isPeeking ? "transition-transform duration-300 ease-out will-change-transform" : "transition-none will-change-transform"} 
-                style={{ 
-                  transformOrigin: '195px 360px',
-                  transform: `rotate(${pupilX * 0.32}deg)`
-                }}
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                <span>Fill Fleet Admin</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleFillCustomerDemo}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-blue-300 transition-colors flex items-center gap-1.5"
               >
-                {/* Black Body */}
-                <path
-                  d="M 145 360 L 145 160 C 145 140, 245 140, 245 160 L 245 360 Z"
-                  fill="#18181b"
-                />
-
-                {/* Black Character Face */}
-                {isPasswordCovered ? (
-                  // Sleeping / Shy Closed Arcs
-                  <g className="transition-all duration-300">
-                    <path d="M 175 185 Q 185 178 195 185" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" fill="none" />
-                    <path d="M 205 185 Q 215 178 225 185" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" fill="none" />
-                  </g>
-                ) : (
-                  // Big Expressive White Eyes Looking Around
-                  <g 
-                    className="transition-none will-change-transform" 
-                    style={{ transform: `translate(${pupilX}px, ${pupilY}px)` }}
-                  >
-                    {/* Left Eye */}
-                    <rect x="175" y="172" width="13" height="13" rx="3" fill="#ffffff" />
-                    {/* Right Eye */}
-                    <rect x="205" y="172" width="13" height="13" rx="3" fill="#ffffff" />
-                  </g>
-                )}
-              </g>
-
-              {/* ---------------------------------------------------- */}
-              {/* 3. YELLOW TALL ROUNDED CHARACTER (Right) */}
-              {/* ---------------------------------------------------- */}
-              <g 
-                className={isPasswordCovered || isPeeking ? "transition-transform duration-300 ease-out will-change-transform" : "transition-none will-change-transform"} 
-                style={{ 
-                  transformOrigin: '270px 360px',
-                  transform: `rotate(${pupilX * 0.38}deg)`
-                }}
-              >
-                {/* Yellow Body */}
-                <path
-                  d="M 230 360 L 230 220 C 230 180, 310 180, 310 220 L 310 360 Z"
-                  fill="#fbb016"
-                />
-
-                {/* Yellow Character Face */}
-                {isPasswordCovered ? (
-                  <path d="M 275 220 Q 285 228 295 220" stroke="#1f2937" strokeWidth="3" strokeLinecap="round" fill="none" />
-                ) : (
-                  <g 
-                    className="transition-none will-change-transform" 
-                    style={{ transform: `translate(${pupilX * 1.1}px, ${pupilY * 1.1}px)` }}
-                  >
-                    {/* Big Eye on Yellow */}
-                    <circle cx="282" cy="220" r="5.5" fill="#1f2937" />
-                    {/* Smiling Mouth */}
-                    <path d="M 268 228 Q 278 235 292 230" stroke="#1f2937" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-                  </g>
-                )}
-              </g>
-
-              {/* ---------------------------------------------------- */}
-              {/* 4. ORANGE DOME CHARACTER (Front Center/Left) */}
-              {/* ---------------------------------------------------- */}
-              <g 
-                className={isPasswordCovered || isPeeking ? "transition-transform duration-300 ease-out will-change-transform" : "transition-none will-change-transform"} 
-                style={{ 
-                  transformOrigin: '135px 360px',
-                  transform: `rotate(${pupilX * 0.22}deg)`
-                }}
-              >
-                {/* Orange Dome Body in Front */}
-                <path
-                  d="M 30 360 C 30 250, 240 250, 240 360 Z"
-                  fill="#ff6b00"
-                />
-
-                {/* Orange Character Face */}
-                {isPasswordCovered ? (
-                  // Happy Eyes ^ ^
-                  <g className="transition-all duration-300">
-                    <path d="M 130 300 Q 138 292 146 300" stroke="#111827" strokeWidth="3" strokeLinecap="round" fill="none" />
-                    <path d="M 154 300 Q 162 292 170 300" stroke="#111827" strokeWidth="3" strokeLinecap="round" fill="none" />
-                    <ellipse cx="150" cy="312" rx="4" ry="3" fill="#111827" />
-                  </g>
-                ) : (
-                  <g 
-                    className="transition-none will-change-transform" 
-                    style={{ transform: `translate(${pupilX * 0.9}px, ${pupilY * 0.9}px)` }}
-                  >
-                    {/* Left Eye */}
-                    <circle cx="138" cy="298" r="4.5" fill="#111827" />
-                    {/* Right Eye */}
-                    <circle cx="162" cy="298" r="4.5" fill="#111827" />
-                    {/* Happy Smile */}
-                    <path d="M 144 310 Q 150 316 156 310" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-                  </g>
-                )}
-              </g>
-
-            </svg>
-
+                <User className="w-3.5 h-3.5 text-blue-400" />
+                <span>Fill Customer Demo</span>
+              </button>
+            </div>
           </div>
 
         </div>
 
         {/* ======================================================== */}
-        {/* RIGHT COLUMN: CLEAN MINIMALIST LOGIN / SIGN UP FORM */}
+        {/* RIGHT COLUMN: PROFESSIONAL LOGIN / SIGN UP FORM */}
         {/* ======================================================== */}
-        <div className="md:col-span-6 bg-white/95 backdrop-blur-xl p-6 sm:p-10 lg:p-12 flex flex-col justify-between border-l border-slate-100/80">
+        <div className="lg:col-span-7 bg-slate-900 p-8 sm:p-12 flex flex-col justify-between">
           
           <div>
-            {/* Top Purple Spring / Helix Logo matching the Behance reference */}
-            <div className="flex justify-center mb-4">
-              <svg width="36" height="36" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path 
-                  d="M19 6C13.5 6 9 9 9 12C9 15 13.5 17 19 17C24.5 17 29 19 29 22C29 25 24.5 28 19 28C13.5 28 9 26 9 23" 
-                  stroke="#6c28ff" 
-                  strokeWidth="5" 
-                  strokeLinecap="round" 
-                />
-                <circle cx="28" cy="10" r="3.5" fill="#ff6b00" />
-              </svg>
-            </div>
+            {/* Tab Navigation: Sign In vs Sign Up */}
+            <div className="flex border-b border-slate-800 mb-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('SIGNIN');
+                  setErrorMessage(null);
+                  setSuccessMessage(null);
+                }}
+                className={`pb-3 text-sm font-semibold transition-colors relative mr-6 ${
+                  activeTab === 'SIGNIN'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                Sign In to Account
+                {activeTab === 'SIGNIN' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full" />
+                )}
+              </button>
 
-            {/* Heading */}
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                {activeTab === 'SIGNIN' ? 'Welcome Back' : 'Create Account'}
-              </h2>
-              <p className="text-xs text-slate-500 mt-1 font-normal">
-                {activeTab === 'SIGNIN' 
-                  ? 'Please enter your account details' 
-                  : 'Register for self-drive vehicle access'}
-              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('SIGNUP');
+                  setErrorMessage(null);
+                  setSuccessMessage(null);
+                }}
+                className={`pb-3 text-sm font-semibold transition-colors relative ${
+                  activeTab === 'SIGNUP'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                Create New Profile
+                {activeTab === 'SIGNUP' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full" />
+                )}
+              </button>
             </div>
 
             {/* Feedback Alerts */}
             {errorMessage && (
-              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-shake">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <div className="mb-6 p-3.5 rounded-xl bg-red-950/60 border border-red-800/80 text-red-200 text-xs flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
 
             {successMessage && (
-              <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2 animate-fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+              <div className="mb-6 p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-800/80 text-emerald-200 text-xs flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>{successMessage}</span>
               </div>
             )}
@@ -572,81 +438,92 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
             {activeTab === 'SIGNIN' && (
               <form onSubmit={handleSignIn} className="space-y-4">
                 
-                {/* Email Input (Clean Underline / Border matching reference) */}
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    onFocus={() => setFocusedField('email')}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder="Example@Gmail.Com"
-                    className="w-full pb-2 pt-3 px-1 bg-transparent border-b-2 border-slate-200 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#6c28ff] transition-colors"
-                  />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                    <input
+                      type="email"
+                      required
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      placeholder="name@example.com or av8279@admin.crms"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    />
+                  </div>
                 </div>
 
-                {/* Password Input with Eye Toggle */}
-                <div className="relative">
-                  <input
-                    type={showLoginPassword ? 'text' : 'password'}
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    onFocus={() => setFocusedField('password')}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder="••••••••••••"
-                    className="w-full pb-2 pt-3 px-1 pr-10 bg-transparent border-b-2 border-slate-200 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#6c28ff] transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-1 bottom-3 text-slate-400 hover:text-slate-700 transition-colors"
-                    title={showLoginPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showLoginPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Password
+                    </label>
+                    <button 
+                      type="button" 
+                      onClick={() => setErrorMessage('For administrator credentials assistance, contact system admin.')}
+                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      Forgot?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full pl-10 pr-10 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-200 transition-colors"
+                    >
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Remember Me & Forgot Password Row */}
-                <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                {/* Remember Me */}
+                <div className="flex items-center text-xs text-slate-400 pt-1">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-300 text-[#6c28ff] focus:ring-[#6c28ff]"
+                      className="rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-blue-500"
                     />
-                    <span>Remember Me</span>
+                    <span>Keep me signed in on this device</span>
                   </label>
-                  <button 
-                    type="button" 
-                    onClick={() => setErrorMessage('For admin password recovery, contact system administrator.')}
-                    className="text-slate-400 hover:text-slate-700 transition-colors"
-                  >
-                    Forgot Password?
-                  </button>
                 </div>
 
-                {/* Primary Purple Login Pill Button */}
+                {/* Submit Sign In Button */}
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full mt-4 py-3 px-6 rounded-full bg-[#6c28ff] hover:bg-[#5b1ee6] text-white text-sm font-bold tracking-wide shadow-md shadow-[#6c28ff]/25 hover:shadow-lg hover:shadow-[#6c28ff]/35 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full mt-2 py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold tracking-wide shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <span>{isLoading ? 'Verifying...' : 'Login'}</span>
+                  <span>{isLoading ? 'Verifying Credentials...' : 'Sign In'}</span>
                 </button>
 
-                {/* Google Login Button */}
+                {/* Divider */}
+                <div className="relative my-4 flex items-center justify-center">
+                  <div className="border-t border-slate-800 w-full"></div>
+                  <span className="bg-slate-900 px-3 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+                    or
+                  </span>
+                </div>
+
+                {/* Google SSO */}
                 <button
                   type="button"
                   onClick={handleGoogleAuth}
                   disabled={isLoading}
-                  className="w-full py-2.5 px-4 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-2.5 transition-all shadow-xs"
+                  className="w-full py-2.5 px-4 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 text-slate-200 text-xs font-semibold flex items-center justify-center gap-3 transition-colors"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path
@@ -666,7 +543,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                     />
                   </svg>
-                  <span>Login With Google</span>
+                  <span>Continue with Google</span>
                 </button>
 
               </form>
@@ -674,99 +551,119 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
 
             {/* TAB 2: SIGN UP FORM */}
             {activeTab === 'SIGNUP' && (
-              <form onSubmit={handleSignUp} className="space-y-3">
+              <form onSubmit={handleSignUp} className="space-y-3.5">
                 
                 <div>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onFocus={() => setFocusedField('other')}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder="Full Legal Name"
-                    className="w-full pb-1.5 pt-2 px-1 bg-transparent border-b-2 border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#6c28ff] transition-colors"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Full Legal Name
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                     <input
-                      type="email"
+                      type="text"
                       required
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      onFocus={() => setFocusedField('email')}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="Email Address"
-                      className="w-full pb-1.5 pt-2 px-1 bg-transparent border-b-2 border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#6c28ff] transition-colors"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Vikramaditya Singh"
+                      className="w-full pl-10 pr-4 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-xs font-medium text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                      <input
+                        type="email"
+                        required
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        placeholder="vikram@example.com"
+                        className="w-full pl-10 pr-4 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-xs font-medium text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Phone Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+91 98765 43210"
+                        className="w-full pl-10 pr-4 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-xs font-medium text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Driving License Number
+                  </label>
+                  <div className="relative">
+                    <FileCheck className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                     <input
-                      type="tel"
+                      type="text"
                       required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      onFocus={() => setFocusedField('other')}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="+91 Phone Number"
-                      className="w-full pb-1.5 pt-2 px-1 bg-transparent border-b-2 border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#6c28ff] transition-colors"
+                      value={licenseNumber}
+                      onChange={(e) => setLicenseNumber(e.target.value)}
+                      placeholder="DL-04-2022-1234567"
+                      className="w-full pl-10 pr-4 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-xs font-mono uppercase text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <input
-                    type="text"
-                    required
-                    value={licenseNumber}
-                    onChange={(e) => setLicenseNumber(e.target.value)}
-                    onFocus={() => setFocusedField('other')}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder="Driving License (DL-04-2022-1234567)"
-                    className="w-full pb-1.5 pt-2 px-1 bg-transparent border-b-2 border-slate-200 text-xs font-mono uppercase text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#6c28ff] transition-colors"
-                  />
-                </div>
-
-                <div className="relative">
-                  <input
-                    type={showSignupPassword ? 'text' : 'password'}
-                    required
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    onFocus={() => setFocusedField('password')}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder="Password (min 6 characters)"
-                    className="w-full pb-1.5 pt-2 px-1 pr-8 bg-transparent border-b-2 border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#6c28ff] transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSignupPassword(!showSignupPassword)}
-                    className="absolute right-1 bottom-2 text-slate-400 hover:text-slate-700 transition-colors"
-                  >
-                    {showSignupPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Create Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                    <input
+                      type={showSignupPassword ? 'text' : 'password'}
+                      required
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="w-full pl-10 pr-10 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-xs font-medium text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-200 transition-colors"
+                    >
+                      {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-500 select-none">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400 select-none">
                     <input
                       type="checkbox"
                       checked={agreedTerms}
                       onChange={(e) => setAgreedTerms(e.target.checked)}
-                      className="rounded border-slate-300 text-[#6c28ff] focus:ring-[#6c28ff]"
+                      className="rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-blue-500"
                     />
-                    <span>I declare that I hold a valid Driving License</span>
+                    <span>I declare that I hold a valid Indian Driving License</span>
                   </label>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full mt-3 py-2.5 px-6 rounded-full bg-[#6c28ff] hover:bg-[#5b1ee6] text-white text-xs font-bold tracking-wide shadow-md shadow-[#6c28ff]/25 transition-all flex items-center justify-center gap-2"
+                  className="w-full mt-2 py-2.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold tracking-wide shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <span>{isLoading ? 'Creating Profile...' : 'Sign Up'}</span>
+                  <span>{isLoading ? 'Creating Account...' : 'Complete Registration'}</span>
                 </button>
 
               </form>
@@ -774,34 +671,34 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
 
           </div>
 
-          {/* Bottom Switcher: "Don't Have An Account? Sign Up" */}
-          <div className="text-center pt-6 text-xs text-slate-500">
+          {/* Bottom Switcher */}
+          <div className="text-center pt-6 text-xs text-slate-400 border-t border-slate-800/80 mt-6">
             {activeTab === 'SIGNIN' ? (
               <p>
-                Don't Have An Account?{' '}
+                Don't have an account yet?{' '}
                 <button
                   type="button"
                   onClick={() => {
                     setActiveTab('SIGNUP');
                     setErrorMessage(null);
                   }}
-                  className="font-bold text-[#6c28ff] hover:underline ml-1"
+                  className="font-semibold text-blue-400 hover:text-blue-300 ml-1 transition-colors"
                 >
-                  Sign Up
+                  Sign Up Here
                 </button>
               </p>
             ) : (
               <p>
-                Already Have An Account?{' '}
+                Already registered?{' '}
                 <button
                   type="button"
                   onClick={() => {
                     setActiveTab('SIGNIN');
                     setErrorMessage(null);
                   }}
-                  className="font-bold text-[#6c28ff] hover:underline ml-1"
+                  className="font-semibold text-blue-400 hover:text-blue-300 ml-1 transition-colors"
                 >
-                  Login
+                  Sign In Here
                 </button>
               </p>
             )}

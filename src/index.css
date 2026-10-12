@@ -71,21 +71,3 @@
   animation: geofence-alarm-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-@keyframes character-breathe {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
-}
-
-@keyframes ambient-glow-pulse {
-  0%, 100% { opacity: 0.35; transform: scale(1); }
-  50% { opacity: 0.65; transform: scale(1.08); }
-}
-
-.animate-character-breathe {
-  animation: character-breathe 4s ease-in-out infinite;
-}
-
-.animate-ambient-glow {
-  animation: ambient-glow-pulse 6s ease-in-out infinite;
-}
-
