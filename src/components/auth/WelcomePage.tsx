@@ -327,10 +327,6 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
             </p>
           </div>
         </div>
-
-        <div className="text-xs text-slate-300 font-medium bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-700/80 backdrop-blur-sm hidden sm:block">
-          Enterprise Access Portal
-        </div>
       </div>
 
       {/* Main Login / Sign-up Card with Glassmorphic Effect & Interactive Border */}

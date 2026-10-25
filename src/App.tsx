@@ -13,7 +13,6 @@ import { InvoiceModal } from './components/customer/InvoiceModal';
 import { ReviewModal } from './components/customer/ReviewModal';
 import { AuthModal, AuthMode } from './components/auth/AuthModal';
 import { WelcomePage } from './components/auth/WelcomePage';
-import { CustomerVerificationModal } from './components/verification/CustomerVerificationModal';
 import { LoyaltyProgramModal } from './components/customer/LoyaltyProgramModal';
 
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -264,10 +263,7 @@ export default function App() {
       showToast(`Admin Console Unlocked: Welcome back, ${user.name}`);
     } else {
       showToast(`Welcome, ${user.name}! Customer account signed in.`);
-      // Check if customer requires KYC Profile or Driving Licence verification
-      if (!user.profileCompleted || user.dlVerificationStatus !== 'VERIFIED') {
-        setIsVerificationModalOpen(true);
-      } else if (pendingBookingVehicle) {
+      if (pendingBookingVehicle) {
         setSelectedVehicleForBooking(pendingBookingVehicle);
         setPendingBookingVehicle(null);
       }
@@ -294,9 +290,8 @@ export default function App() {
     StorageService.setCurrentUser(updatedCustomer);
     setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
     StorageService.saveCustomers(customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
-    showToast(`✓ Identity & MoRTH Driving Licence Verified! Rental clearance granted.`);
+    showToast(`✓ Profile and driving details updated.`);
 
-    // If customer was in middle of booking a car, open the booking wizard
     if (pendingBookingVehicle) {
       setSelectedVehicleForBooking(pendingBookingVehicle);
       setPendingBookingVehicle(null);
@@ -304,16 +299,11 @@ export default function App() {
     }
   };
 
-  // Book Vehicle guard: Enforces Government DL Verification before allowing rental
+  // Book Vehicle handler
   const handleBookVehicle = (veh: Vehicle) => {
     if (!currentUser) {
       setPendingBookingVehicle(veh);
       handleOpenAuth('CUSTOMER_SIGNUP', `book the ${veh.year} ${veh.make} ${veh.model}`);
-    } else if (currentUser.role === 'ROLE_CUSTOMER' && (!currentUser.profileCompleted || currentUser.dlVerificationStatus !== 'VERIFIED')) {
-      setPendingBookingVehicle(veh);
-      setVerificationVehicleBlocked(`${veh.year} ${veh.make} ${veh.model}`);
-      setIsVerificationModalOpen(true);
-      showToast('MoRTH Driving Licence verification required before renting a car.');
     } else {
       setSelectedVehicleForBooking(veh);
     }
@@ -715,6 +705,36 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         
+        {/* Administrator in Customer View Mode Quick-Return Banner */}
+        {currentUser?.role === 'ROLE_ADMIN' && activeTab.startsWith('customer-') && (
+          <div className="mb-6 bg-slate-900 border border-amber-500/40 rounded-2xl p-3.5 sm:p-4 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center shrink-0 text-xs shadow-xs">
+                AD
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white flex items-center gap-2">
+                  <span>Customer Preview Mode Active</span>
+                  <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30 font-medium">
+                    Admin Session
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-300">
+                  You are previewing the customer fleet catalog as Administrator ({currentUser.name}).
+                </p>
+              </div>
+            </div>
+
+            <button
+              id="banner-return-to-admin-btn"
+              onClick={() => setActiveTab('admin-dashboard')}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+            >
+              <span>Return to Admin View →</span>
+            </button>
+          </div>
+        )}
+
         {/* CUSTOMER PORTAL VIEWS */}
         {activeTab === 'customer-catalog' && (
           <VehicleCatalog
@@ -860,17 +880,19 @@ export default function App() {
 
       {/* POPUP MODALS */}
       {/* 1. Car Details Modal */}
-      <CarDetailsModal
-        vehicle={selectedVehicleForDetails}
-        reviews={reviews}
-        onClose={() => setSelectedVehicleForDetails(null)}
-        onBookNow={(veh) => {
-          setSelectedVehicleForDetails(null);
-          handleBookVehicle(veh);
-        }}
-        pickupDate={pickupDate}
-        returnDate={returnDate}
-      />
+      {selectedVehicleForDetails && (
+        <CarDetailsModal
+          vehicle={selectedVehicleForDetails}
+          reviews={reviews}
+          onClose={() => setSelectedVehicleForDetails(null)}
+          onBookNow={(veh) => {
+            setSelectedVehicleForDetails(null);
+            handleBookVehicle(veh);
+          }}
+          pickupDate={pickupDate}
+          returnDate={returnDate}
+        />
+      )}
 
       {/* 2. Step-by-Step Booking & Payment Wizard (Guarded by Customer Account) */}
       {selectedVehicleForBooking && currentUser && (
@@ -891,10 +913,12 @@ export default function App() {
       )}
 
       {/* 3. Printable Tax Invoice & Receipt Modal */}
-      <InvoiceModal
-        booking={viewingInvoice}
-        onClose={() => setViewingInvoice(null)}
-      />
+      {viewingInvoice && (
+        <InvoiceModal
+          booking={viewingInvoice}
+          onClose={() => setViewingInvoice(null)}
+        />
+      )}
 
       {/* 4. Customer Review & Rating Modal */}
       {reviewingBooking && (
@@ -907,41 +931,31 @@ export default function App() {
       )}
 
       {/* 5. Java Spring Boot Architecture & Code Explorer */}
-      <JavaArchitectureExplorer
-        isOpen={isJavaModalOpen}
-        onClose={() => setIsJavaModalOpen(false)}
-      />
-
-      {/* 6. Role-Based Unified Authentication & Registration Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        initialMode={authModalMode}
-        taskAttempted={authTaskAttempted}
-        onClose={() => {
-          setIsAuthModalOpen(false);
-          setAuthTaskAttempted(null);
-        }}
-        onLoginSuccess={handleLoginSuccess}
-        existingCustomers={customers}
-        onCustomerCreated={handleCustomerCreated}
-      />
-
-      {/* 7. Government-Authorized Customer Profile & DL Verification Modal */}
-      {currentUser && (
-        <CustomerVerificationModal
-          isOpen={isVerificationModalOpen}
-          currentUser={currentUser}
-          onClose={() => {
-            setIsVerificationModalOpen(false);
-            setVerificationVehicleBlocked(null);
-          }}
-          onVerificationComplete={handleVerificationComplete}
-          requiredForRentalVehicleName={verificationVehicleBlocked}
+      {isJavaModalOpen && (
+        <JavaArchitectureExplorer
+          isOpen={isJavaModalOpen}
+          onClose={() => setIsJavaModalOpen(false)}
         />
       )}
 
-      {/* 8. Velocity Rewards Loyalty Program Modal */}
-      {currentUser && (
+      {/* 6. Role-Based Unified Authentication & Registration Modal */}
+      {isAuthModalOpen && (
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          initialMode={authModalMode}
+          taskAttempted={authTaskAttempted}
+          onClose={() => {
+            setIsAuthModalOpen(false);
+            setAuthTaskAttempted(null);
+          }}
+          onLoginSuccess={handleLoginSuccess}
+          existingCustomers={customers}
+          onCustomerCreated={handleCustomerCreated}
+        />
+      )}
+
+      {/* Velocity Rewards Loyalty Program Modal */}
+      {isLoyaltyModalOpen && currentUser && (
         <LoyaltyProgramModal
           isOpen={isLoyaltyModalOpen}
           currentUser={currentUser}

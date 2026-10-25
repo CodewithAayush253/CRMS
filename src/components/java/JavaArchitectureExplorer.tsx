@@ -28,8 +28,6 @@ export const JavaArchitectureExplorer: React.FC<JavaArchitectureExplorerProps> =
   isOpen,
   onClose,
 }) => {
-  if (!isOpen) return null;
-
   const [activeTab, setActiveTab] = useState<'concepts' | 'code' | 'api-tester'>('concepts');
   const [selectedFile, setSelectedFile] = useState<JavaCodeFile>(JAVA_PROJECT_FILES[0]);
   const [copiedFilename, setCopiedFilename] = useState<string | null>(null);
@@ -145,6 +143,8 @@ export const JavaArchitectureExplorer: React.FC<JavaArchitectureExplorerProps> =
       }
     }, 450);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto">

@@ -548,7 +548,7 @@ class TheftPreventionService {
           type: 'PIN_ATTEMPTS_EXCEEDED',
           title: 'PIN-to-Drive Lockout: 3 Failed Attempts',
           description: 'Three consecutive invalid PIN attempts entered on dashboard touchscreen. Exponential backoff delay enforced.',
-          actionTaken: 'Dashboard input locked for 15 minutes; secondary push-notification OTP sent to verified renter phone.',
+          actionTaken: 'Dashboard input locked for 15 minutes; alert notification sent to renter phone.',
           location: current.currentCoordinates.address,
           speedKmh: 0,
           resolved: true,

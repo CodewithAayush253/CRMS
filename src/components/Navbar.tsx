@@ -45,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
   const isCustomer = currentUser?.role === 'ROLE_CUSTOMER';
+  const isViewingAsCustomer = activeTab.startsWith('customer-');
 
   const handleAdminTabClick = (tabName: any) => {
     if (isAdmin) {
@@ -100,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Desktop Navigation Links */}
           <nav className="hidden xl:flex items-center gap-1">
-            {isAdmin ? (
+            {isAdmin && !isViewingAsCustomer ? (
               adminNavItems.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -125,6 +126,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               })
             ) : (
               <>
+                {isAdmin && isViewingAsCustomer && (
+                  <button
+                    id="nav-back-to-admin-tab"
+                    onClick={() => onSelectTab('admin-dashboard')}
+                    className="px-3 py-1.5 mr-1 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Admin View</span>
+                  </button>
+                )}
+
                 <button
                   id="nav-customer-catalog"
                   onClick={() => onSelectTab('customer-catalog')}
@@ -207,28 +219,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : isCustomer ? (
               <div className="flex items-center gap-3">
-                {/* Verification Status Badge */}
-                {currentUser.dlVerificationStatus === 'VERIFIED' ? (
-                  <button
-                    type="button"
-                    onClick={onOpenVerificationModal}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold hover:bg-emerald-500/25 transition-colors"
-                    title="MoRTH Sarathi LMV Driving Licence Verified"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="hidden lg:inline">DL Verified (Sarathi)</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onOpenVerificationModal}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[11px] font-bold hover:bg-amber-500/30 transition-colors animate-pulse"
-                    title="Complete KYC Profile & Driving Licence Verification to rent vehicles"
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Verify Profile & DL</span>
-                  </button>
-                )}
 
                 {/* Loyalty Program Points Badge */}
                 <button
@@ -290,13 +280,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 </div>
 
-                <button
-                  id="nav-customer-view-btn"
-                  onClick={() => onSelectTab('customer-catalog')}
-                  className="text-xs px-2.5 py-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-md transition-colors hidden sm:block font-medium"
-                >
-                  Customer View
-                </button>
+                {isViewingAsCustomer ? (
+                  <button
+                    id="nav-shift-to-admin-btn"
+                    onClick={() => onSelectTab('admin-dashboard')}
+                    className="text-xs px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                    title="Switch back to Administrator Operations Dashboard"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-slate-950" />
+                    <span>Admin View</span>
+                  </button>
+                ) : (
+                  <button
+                    id="nav-customer-view-btn"
+                    onClick={() => onSelectTab('customer-catalog')}
+                    className="text-xs px-3 py-1.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors hidden sm:flex items-center gap-1.5 font-medium"
+                    title="Switch to Customer Fleet Catalog View"
+                  >
+                    <Car className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Customer View</span>
+                  </button>
+                )}
 
                 <button
                   id="nav-admin-logout-btn"
@@ -326,25 +330,49 @@ export const Navbar: React.FC<NavbarProps> = ({
         {mobileMenuOpen && (
           <div className="xl:hidden py-3 border-t border-slate-800 space-y-2">
             <div className="grid grid-cols-2 gap-1.5">
-              {isAdmin ? (
-                adminNavItems.map((tab) => (
+              {isAdmin && !isViewingAsCustomer ? (
+                <>
                   <button
-                    key={tab.id}
                     onClick={() => {
-                      onSelectTab(tab.id);
+                      onSelectTab('customer-catalog');
                       setMobileMenuOpen(false);
                     }}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold text-left transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-slate-800 text-white font-bold'
-                        : 'text-slate-300 hover:bg-slate-800/60'
-                    }`}
+                    className="col-span-2 px-3 py-2 rounded-lg text-xs font-bold text-left flex items-center gap-2 bg-slate-800 text-amber-400 border border-slate-700 hover:bg-slate-700"
                   >
-                    {tab.label} {!!tab.count && tab.count > 0 && `(${tab.count})`}
+                    <Car className="w-4 h-4" />
+                    <span>Switch to Customer View</span>
                   </button>
-                ))
+                  {adminNavItems.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        onSelectTab(tab.id);
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold text-left transition-colors ${
+                        activeTab === tab.id
+                          ? 'bg-slate-800 text-white font-bold'
+                          : 'text-slate-300 hover:bg-slate-800/60'
+                      }`}
+                    >
+                      {tab.label} {!!tab.count && tab.count > 0 && `(${tab.count})`}
+                    </button>
+                  ))}
+                </>
               ) : (
                 <>
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        onSelectTab('admin-dashboard');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="col-span-2 px-3 py-2 rounded-lg text-xs font-bold text-left flex items-center gap-2 bg-amber-500 text-slate-950 shadow-xs hover:bg-amber-400"
+                    >
+                      <ShieldAlert className="w-4 h-4" />
+                      <span>← Return to Admin View</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       onSelectTab('customer-catalog');

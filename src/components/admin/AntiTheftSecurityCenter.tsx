@@ -179,49 +179,8 @@ export const AntiTheftSecurityCenter: React.FC<AntiTheftSecurityCenterProps> = (
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                Active Cyber Defense
-              </span>
-              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                Live Telematics Bus Connected
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-              Software-Based Car Theft Prevention Hub
-            </h1>
-            <p className="text-sm sm:text-base text-slate-300 max-w-2xl font-normal leading-relaxed">
-              Real-time cryptographic engine immobilizers, dynamic geofence tripwires, CAN-bus relay attack mitigation, PIN-to-Drive authentication, and automated Stolen Vehicle Recovery (SVR) protocols.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              onClick={() => {
-                theftPreventionService.resetAllToDemo();
-                refreshData();
-              }}
-              className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition-all flex items-center gap-2 active:scale-95"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Reset Demo Telematics
-            </button>
-            <button
-              onClick={() => setActiveTab('ATTACK_SIMULATOR')}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs transition-all shadow-lg shadow-amber-500/25 flex items-center gap-2 active:scale-95"
-            >
-              <Zap className="w-4 h-4 fill-current" />
-              Run Attack Simulator
-            </button>
-          </div>
-        </div>
-
         {/* Telemetry Metric Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mt-8 pt-6 border-t border-slate-800/80">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 relative z-10">
           <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold mb-1">
               <span>Security Score</span>
@@ -345,86 +304,7 @@ export const AntiTheftSecurityCenter: React.FC<AntiTheftSecurityCenterProps> = (
         </div>
       )}
 
-      {/* Navigation Sub-Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex-wrap">
-          <button
-            onClick={() => setActiveTab('FLEET_ROSTER')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'FLEET_ROSTER'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-extrabold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Car className="w-4 h-4" />
-            Fleet Security Roster ({vehicles.length})
-          </button>
 
-          {/* New Geofence Watchdog & Alerts Subtab */}
-          <button
-            onClick={() => setActiveTab('GEOFENCE_NOTIFICATIONS')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'GEOFENCE_NOTIFICATIONS'
-                ? 'bg-sky-500 text-slate-950 shadow-sm font-extrabold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Crosshair className="w-4 h-4" />
-            Geofence Watchdog & Alerts
-            {(breachedCount > 0 || geofenceNotifs.some(n => !n.acknowledged)) && (
-              <span className="px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black animate-pulse">
-                {breachedCount || geofenceNotifs.filter(n => !n.acknowledged).length}
-              </span>
-            )}
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('ATTACK_SIMULATOR')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'ATTACK_SIMULATOR'
-                ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Zap className="w-4 h-4" />
-            Attack Simulation Lab
-          </button>
-
-          <button
-            onClick={() => setActiveTab('ALERTS_FEED')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'ALERTS_FEED'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-extrabold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4 text-red-500" />
-            Incident Log & Threat Feeds
-            {criticalAlertsCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black">
-                {criticalAlertsCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('ARCHITECTURE_GUIDE')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'ARCHITECTURE_GUIDE'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-extrabold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <FileText className="w-4 h-4 text-indigo-500" />
-            Software Anti-Theft Architecture
-          </button>
-        </div>
-
-        <div className="text-xs text-slate-500 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-          <span>Failsafe Cryptographic Telematics Layer v3.4</span>
-        </div>
-      </div>
 
 
       {/* TAB 1: FLEET SECURITY ROSTER */}
